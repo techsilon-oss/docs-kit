@@ -1,0 +1,23 @@
+CLAUDE.md
+  s_739ade1d741741::t_d218d8ab34cd55 1-13
+README.md
+  s_739ade1d741741::t_b6bbb53c397621 1-13
+docs/DESIGN.md
+  s_739ade1d741741::t_75344db7181726 1-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7fd216eb2f3bb39dc7a6a440a80fde1375b4584",
+  "prompts": {},
+  "sessions": {
+    "s_739ade1d741741": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_739ade1d741741",
+        "model": "unknown"
+      },
+      "human_author": "Sujit Gangadharan <gsujit@gmail.com>"
+    }
+  }
+}
