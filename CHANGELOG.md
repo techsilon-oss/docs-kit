@@ -2,6 +2,17 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.2.0] - 2026-11-12
+
+### Added
+
+- `docs-kit init`: one-step setup (DESIGN §6.7). Writes a starter `docs-kit.json` from the repo as it is, the front door when missing, a pinned devDependency and a `docs:check` script; `--test <file>` writes the check as a vitest or pytest test, only once the check passes, so a failing test never blocks a commit; `--dry-run` writes nothing. Never overwrites; running it again changes nothing.
+- A Claude Code plugin (this repo is its marketplace) with `/docs-kit-init`: runs `init`, explains each check finding, proposes `roles` and `protected` paths, and offers the guided reorganisation. Install with `/plugin install docs-kit --marketplace techsilon-oss/docs-kit`.
+
+### Changed
+
+- Rollout (DESIGN §10): 0.2 is now `init` and the Claude Code plugin; `/pin` and `print` move to 0.3, `/docs-reorg` and the snapshot library to 0.4. `docs-kit print` now says it arrives in 0.3.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added

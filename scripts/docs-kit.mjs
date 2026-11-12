@@ -7,19 +7,22 @@ import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_FILE, ConfigError, DEFAULTS, loadConfig } from './lib/config.mjs';
 import { check, formatCheck, listDocFiles, parseDate } from './lib/check.mjs';
+import { InitError, formatInit, nextSteps, runInit } from './lib/init.mjs';
 import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 const USAGE = `docs-kit ${VERSION}
 
 Usage:
+  docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]
+                                                 set up this repo: docs-kit.json and more
   docs-kit check [--json] [--today YYYY-MM-DD]
   docs-kit move <old> <new> [<old> <new> ...] [--dry-run]
   docs-kit index                                 write "How-tos by role" in docs/README.md
-  docs-kit print <file.md> [--version X.Y]      (arrives in 0.2)
+  docs-kit print <file.md> [--version X.Y]      (arrives in 0.3)
   docs-kit --version | --help
 
 Run from anywhere inside the repo. Configuration: ${CONFIG_FILE} at the repo root.
@@ -62,6 +65,20 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
     const cmd = args.shift();
     const root = repoRootOf(cwd) || cwd;
+
+    if (cmd === 'init') {
+      const dryRun = takeFlag(args, '--dry-run');
+      const docsRoot = takeValue(args, '--docs-root');
+      const testFile = takeValue(args, '--test');
+      if (args.length) throw new UsageError(`unexpected argument "${args[0]}"`);
+      if (!repoRootOf(cwd)) throw new UsageError('init must run inside a git repository');
+      const { plan, result } = runInit(root, { docsRoot, testFile, version: VERSION, dryRun });
+      out(formatInit(plan, { dryRun }));
+      out('');
+      out(formatCheck(result, plan.config.docsRoot));
+      out(nextSteps(plan, result));
+      return 0;
+    }
 
     if (cmd === 'check') {
       const json = takeFlag(args, '--json');
@@ -122,7 +139,7 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
 
     if (cmd === 'print') {
-      err('docs-kit print arrives in 0.2 (DESIGN §10). Nothing was printed.');
+      err('docs-kit print arrives in 0.3 (DESIGN §10). Nothing was printed.');
       return 2;
     }
 
@@ -134,6 +151,10 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
     if (e instanceof ConfigError) {
       err(`docs-kit: ${e.message}`);
+      return 2;
+    }
+    if (e instanceof InitError) {
+      err(`docs-kit init: ${e.message}${e.partial ? '' : '\nNothing was written.'}`);
       return 2;
     }
     if (e instanceof MoveError) {

@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12. Later steps are not built yet.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -178,6 +178,27 @@ For projects that generate docs:
 
 Node first. A Python port is a later option, only if a trial project needs it.
 
+### 6.7 Setup — `docs-kit init` and `/docs-kit-init`
+
+**Decided (2026-11-12):** a repo adopts docs-kit in one step, in two ways that share one implementation. The CLI is the engine; the skill is a guided layer over it; the govkit module (§9) calls the same CLI. No other way in copies the setup logic.
+
+**`docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]`** (CLI, no Claude needed). The same repo always gives the same result.
+
+1. Reads the repo and writes a starter `docs-kit.json` that describes the docs folder **as it is today**:
+   - `subjects`: the folders already at the docs root;
+   - `rootAllowed`: `README.md`, plus docs-root files another tool's manifest names (for example the hub and roadmap in `govkit.json`), so that tool keeps working;
+   - `docMaps`: a doc map at a known place (`scripts/source-doc-map.json`), when it selects at least one path;
+   - `immutablePrefixes`: migration folders that exist (hazard H3), and the files another tool vendors with a checksum (`govkit.json` `files`), so `move` never edits them;
+   - `snapshotTopics`: any `<subject>/snapshots/<topic>/` folders;
+   - `protected` and `roles` stay empty: only the owner knows them. `init` says so.
+2. Adds `docs/README.md` (the front door) when it is missing.
+3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`.
+4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default. **The test is written only when the check passes.** While it fails, `init` skips the test and says so: a failing test would block every commit during the reorganisation. It goes in with the reorganisation's last slice (§6.3 step 5).
+5. Never overwrites, never commits, safe to run again. `--dry-run` lists the changes and writes nothing.
+6. Ends by running `check` with the new configuration. On a repo that does not follow the rule yet, the check fails; that is expected, is not an `init` failure (exit 0), and `init` points to the guided reorganisation (§6.3).
+
+**`/docs-kit-init`** (skill, in the plugin, §8). Runs `docs-kit init --dry-run`, shows the plan, and on the owner's yes runs it. Then it adds what needs judgement: explains each check finding, proposes `roles` and `protected` paths from what the repo shows (it writes `roles` only once how-tos exist, because `roles` with no how-tos fails the check), picks where the test goes and runs `init --test`, and offers the reorganisation steps (§6.3). It never moves a doc before the owner approves a proposal.
+
 ## 7. Hazards found in a real reorganisation
 
 Each hazard below happened, or nearly happened, during one reorganisation of a large `docs/` tree. Each has a guard in the tools. The audit step checks for all of them.
@@ -197,14 +218,15 @@ Each hazard below happened, or nearly happened, during one reorganisation of a l
 
 ## 8. Distribution
 
-- **Plugin:** the skills (`/pin`, `/docs-reorg`) as a Claude Code plugin from this repo.
-- **Scripts:** `scripts/docs-kit.mjs` with subcommands `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, or vendored.
+- **Plugin:** the skills (`/docs-kit-init`, then `/pin`, `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
+- **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
 - **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version.
 
 ## 9. govkit module (optional)
 
 docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (built there, not here):
 
+- `/govkit-init`: offers docs-kit as an optional module and, on a yes, runs `docs-kit init` (§6.7). It does not copy the setup logic;
 - `/govkit-doctor`: reports whether docs-kit is configured, its version, and the result of `docs-kit check`;
 - `/govkit-session status`: lists waiting pins and stale how-tos;
 - `/govkit-session close`: runs `docs-kit check` and asks whether anything from the session should be pinned.
@@ -214,14 +236,17 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 | Step | What | Done when |
 |---|---|---|
 | 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
-| Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts 0.1: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.3 |
-| 0.2 | `/pin` (neutral), `print` | A pin and a how-to with print copies are made in a fixture repo |
-| 0.3 | `/docs-reorg`, snapshot library | Used end to end on a trial repo |
+| 0.2 | `docs-kit init` (§6.7), and the plugin with `/docs-kit-init` | `init` sets up a fixture repo, and running it again changes nothing; the skill sets up a repo from the plugin |
+| Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.4 |
+| 0.3 | `/pin` (neutral), `print` | A pin and a how-to with print copies are made in a fixture repo |
+| 0.4 | `/docs-reorg`, snapshot library | Used end to end on a trial repo |
 | Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
 | Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
 | Clean-up | Retire the older docs-generator template in the house standards repo | Nothing points to it |
 
 **Decided (2026-11-12):** 0.1 is built first and on its own, in this repo, with no connection to any trial repo. Trial 1 then adopts the tagged release; nothing in this repo is written for it.
+
+**Decided (2026-11-12):** setup comes before Trial 1. 0.2 is `init` and the plugin with `/docs-kit-init` (§6.7), so the trial adopts the kit the way any repo would. `/pin` and `print` move to 0.3, `/docs-reorg` and the snapshot library to 0.4.
 
 ## 11. Owner questions
 
