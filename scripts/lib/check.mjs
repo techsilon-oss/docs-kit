@@ -1,7 +1,9 @@
 // docs-kit — layout check (DESIGN §6.1).
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, posix } from 'node:path';
+import { frontMatter } from './frontmatter.mjs';
 import { repoRootOf, trackedFiles, untrackedFiles } from './git.mjs';
+import { checkRoles } from './roles.mjs';
 
 export const SNAPSHOT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*_(\d{4}-\d{2}-\d{2})\.[A-Za-z0-9]+$/;
 export const PRINT_COPY_NAME = /^(.+)_v(\d+\.\d+)_(\d{4}-\d{2}-\d{2})\.(docx|pdf)$/;
@@ -53,17 +55,6 @@ export function selectPath(data, expr) {
     }
   }
   return values;
-}
-
-function frontMatter(text) {
-  const m = /^﻿?---\r?\n([\s\S]*?)\r?\n---\r?(?:\n|$)/.exec(text);
-  if (!m) return {};
-  const out = {};
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = /^([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$/.exec(line);
-    if (kv) out[kv[1]] = kv[2].replace(/^["']|["']$/g, '');
-  }
-  return out;
 }
 
 /**
@@ -264,6 +255,11 @@ export function check(root, cfg, { today = new Date() } = {}) {
   for (const [key, names] of prints) {
     if (names.length > 1) warnings.push(`${D}/${key.split('|')[0]}: ${names.length} .${key.split('|')[1]} print copies; only the newest stays (${names.sort().join(', ')})`);
   }
+
+  // How-tos by role (DESIGN §4.1).
+  const roles = checkRoles(root, cfg, rel);
+  errors.push(...roles.errors);
+  warnings.push(...roles.warnings);
 
   return { errors, warnings, ok: errors.length === 0, stats };
 }

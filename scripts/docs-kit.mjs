@@ -6,9 +6,10 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_FILE, ConfigError, DEFAULTS, loadConfig } from './lib/config.mjs';
-import { check, formatCheck, parseDate } from './lib/check.mjs';
+import { check, formatCheck, listDocFiles, parseDate } from './lib/check.mjs';
 import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
+import { writeIndex } from './lib/roles.mjs';
 
 export const VERSION = '0.1.0';
 
@@ -17,6 +18,7 @@ const USAGE = `docs-kit ${VERSION}
 Usage:
   docs-kit check [--json] [--today YYYY-MM-DD]
   docs-kit move <old> <new> [<old> <new> ...] [--dry-run]
+  docs-kit index                                 write "How-tos by role" in docs/README.md
   docs-kit print <file.md> [--version X.Y]      (arrives in 0.2)
   docs-kit --version | --help
 
@@ -98,6 +100,25 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
         out(`\n(no ${CONFIG_FILE}: layout check skipped)`);
       }
       return report.newlyVisible.length ? 1 : 0;
+    }
+
+    if (cmd === 'index') {
+      if (args.length) throw new UsageError(`unexpected argument "${args[0]}"`);
+      const cfg = loadConfig(root);
+      if (!cfg) throw new ConfigError(`${CONFIG_FILE} not found at the repo root (${root})`);
+      if (!cfg.roles.length) throw new ConfigError(`${CONFIG_FILE} has no "roles" list; how-tos by role need one (DESIGN §4.1)`);
+      const files = listDocFiles(root, cfg.docsRoot).map((f) => f.slice(cfg.docsRoot.length + 1));
+      let r;
+      try {
+        r = writeIndex(root, cfg, files);
+      } catch (e) {
+        err(`docs-kit index: ${e.message}`);
+        return 1;
+      }
+      out(r.changed
+        ? `${cfg.docsRoot}/README.md: "How-tos by role" ${r.created ? 'added' : 'updated'}`
+        : `${cfg.docsRoot}/README.md: "How-tos by role" is up to date`);
+      return 0;
     }
 
     if (cmd === 'print') {

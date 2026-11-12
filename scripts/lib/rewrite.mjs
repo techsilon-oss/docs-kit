@@ -154,7 +154,9 @@ export function findPiecedPaths(text, keys) {
     for (const segs of segKeys) {
       if (runMatches(tokens, segs)) matched.push(segs.join('/'));
     }
-    if (matched.length) hits.push({ line: n + 1, text: line.trim(), paths: matched });
+    // Name the moved folder once, not every file inside it.
+    const top = matched.filter((k) => !matched.some((j) => j !== k && k.startsWith(j + '/')));
+    if (top.length) hits.push({ line: n + 1, text: line.trim(), paths: top.sort() });
   }
   return hits;
 }

@@ -15,6 +15,7 @@ export const DEFAULTS = Object.freeze({
   snapshotTopics: {},
   howtoStaleDays: 90,
   snapshotStaleDays: 30,
+  roles: [],
 });
 
 export class ConfigError extends Error {}
@@ -93,7 +94,7 @@ export function parseConfig(text, source = CONFIG_FILE) {
   const isStrMap = (v) => v && typeof v === 'object' && !Array.isArray(v) &&
     Object.values(v).every((s) => typeof s === 'string');
   if (typeof cfg.docsRoot !== 'string' || !cfg.docsRoot) problems.push('docsRoot must be a non-empty string');
-  for (const k of ['subjects', 'rootAllowed', 'immutablePrefixes']) {
+  for (const k of ['subjects', 'rootAllowed', 'immutablePrefixes', 'roles']) {
     if (!isStrArray(cfg[k])) problems.push(`${k} must be an array of strings`);
   }
   for (const k of ['rootAllowedTools', 'protected', 'snapshotTopics']) {

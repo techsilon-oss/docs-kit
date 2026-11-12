@@ -125,4 +125,6 @@ test('pieced paths: quoted segments in two or more literals are found (H7)', () 
   assert.equal(findPiecedPaths('const p = "docs/exports/legal"', keys).length, 0, 'whole path: rewritten, not a review hit');
   assert.equal(findPiecedPaths('const a = "legal"; const b = "other"', keys).length, 0);
   assert.equal(findPiecedPaths('join("exports", "x", "legal")', keys).length, 0, 'segments must be consecutive');
+  const folder = findPiecedPaths('join(root, "docs", "legal")', ['docs/legal/TERMS.md', 'docs/legal/README.md', 'docs/legal']);
+  assert.deepEqual(folder[0].paths, ['docs/legal'], 'a moved folder is named once, not every file in it');
 });

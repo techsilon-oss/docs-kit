@@ -69,12 +69,14 @@ test('how-tos: stale, missing last_checked, and naming are warnings', withFixtur
     'docs/operations/howto/restart.md': 'x',
   },
 }, (root, cfg) => {
-  const r = check(root, cfg, { today: TODAY });
+  // Roles off here: role rules have their own tests in roles.test.mjs.
+  const r = check(root, { ...cfg, roles: [] }, { today: TODAY });
   assert.ok(r.ok, 'how-to findings are warnings only');
   assert.ok(has(r.warnings, 'HOWTO-restore.md: last_checked 2026-01-01 is 304 days old (limit 90)'), r.warnings.join('\n'));
   assert.ok(has(r.warnings, 'HOWTO-rotate.md: no valid last_checked'), r.warnings.join('\n'));
   assert.ok(has(r.warnings, 'restart.md: how-tos are named HOWTO-<task>.md'), r.warnings.join('\n'));
-  assert.ok(!has(r.warnings, 'HOWTO-deploy.md'), r.warnings.join('\n'));
+  assert.ok(!has(r.warnings, 'HOWTO-deploy.md: last_checked'), r.warnings.join('\n'));
+  assert.ok(has(r.warnings, 'HOWTO-deploy.md: names roles, but docs-kit.json has no "roles" list'), r.warnings.join('\n'));
 }));
 
 test('ignored files under docs/ are not part of the layout', withFixture({}, (root, cfg) => {
