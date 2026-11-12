@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft for review, 2026-10-31. Nothing is built yet. This file is the brief for the first build session.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Nothing is built yet. This file is the brief for the first build session.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -30,6 +30,7 @@ One maintained standard, usable in any repo, that answers "where is X?" the same
 - Not a docs website generator. The output is Markdown in the repo.
 - Not a writing-style linter, except the how-to writing rule in `/pin`.
 - Does not decide a project's subjects. It gives a starting list and the project edits it.
+- **Not feature records or test traceability.** **Decided (2026-11-12):** records that tie code to a feature, a test case and an automated test belong to [qa-kit](https://github.com/techsilon-oss/qa-kit). docs-kit holds a feature's design and plans (`<subject>/features/<feature>/`) and may link to qa-kit's records, but never defines their format or checks them.
 
 ---
 
@@ -71,6 +72,16 @@ Every doc is one of five kinds. A project's agent instructions (for example `CLA
 | **Note** (pin) | A dated record of a discussion or analysis | No: promoted or dropped, never rewritten |
 | **Archive** | Superseded material | No |
 
+### 4.1 How-tos by role
+
+**Decided (2026-11-12):** the layout includes a **per-role index of how-tos**, so a reader can answer "what can I do, and where are the steps?" for their own role without knowing the subject folders. Many apps have several kinds of user (for example a customer, support staff, an administrator), and today their guides end up as one long manual or as one guide per role that repeats the same steps.
+
+Proposal (details open until the build session):
+
+- Each how-to names who it is for in its front matter: `roles: [customer, support]`. The project lists its roles once, in `docs-kit.json` (`"roles": [...]`).
+- The front door (`docs/README.md`) has a **How-tos by role** section: one list per role, each line linking a how-to. One how-to appears under every role it names; the steps are written once.
+- `docs-kit check` fails when a how-to names a role that is not in config, when a how-to has no `roles`, or when the index and the front matter disagree. Proposal: `docs-kit index` writes the section, so it is generated, never hand-kept.
+
 ### Starter subject list
 
 Offered by the reorganisation skill, then edited per project: `product`, `platform` (architecture, infrastructure), `operations` (runbooks, launch, incidents), `testing`, `money` (payments, pricing, tax), `legal`, `business`, `support`, `notes`, `archive`. A project's core domain (what the product does for its users) usually gets one subject of its own.
@@ -94,7 +105,9 @@ One file at the repo root. Every tool reads it; nothing is hard-coded.
   "immutablePrefixes": ["db/migrations/"],
   // Snapshot topic -> subject (see §6.6).
   "snapshotTopics": { "architecture": "platform", "launch-readiness": "operations" },
-  "howtoStaleDays": 90
+  "howtoStaleDays": 90,
+  // Roles that how-tos may name (see §4.1).
+  "roles": ["customer", "support", "admin"]
 }
 ```
 
@@ -112,6 +125,7 @@ Exit 0 when the rule holds, non-zero with a list when it does not. Checks:
 4. **No vacuous pass:** each check that scans a set asserts the set is not empty. A check that reads zero docs because a path changed must fail, not pass.
 5. Snapshot freshness (warning only): the date comes from the **file name**, never from file contents or modification time (hazard H6).
 6. How-tos whose `last_checked` is older than `howtoStaleDays` (warning only).
+7. How-tos by role (§4.1): every how-to names known roles, and the index matches the front matter.
 
 Runs as a CLI and is easy to wrap as a unit test (a ten-line example for vitest and for pytest ships in `examples/`).
 
@@ -151,7 +165,7 @@ When it moves, remove every project-specific script name from the skill text; it
 
 ### 6.5 Print copies — `docs-kit print <file.md> [--version X.Y]`
 
-Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed; otherwise reports that printing was skipped. Warns about tables wider than the page.
+Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed; otherwise reports that printing was skipped. Warns about tables wider than the page. **Decided (2026-11-12):** `pandoc` only, no bundled fallback; when it is absent, printing is skipped with a message, never an error.
 
 ### 6.6 Snapshot routing — a small library
 
@@ -198,19 +212,26 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 
 | Step | What | Done when |
 |---|---|---|
-| 0.1 | Layout rule, `docs-kit.json`, `check`, `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
+| 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
+| Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts 0.1: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.3 |
 | 0.2 | `/pin` (neutral), `print` | A pin and a how-to with print copies are made in a fixture repo |
-| 0.3 | `/docs-reorg`, snapshot library | Used end to end on the first trial repo |
-| Trial 1 | One TechSilon app repo the owner names; it has a generator that writes to `docs/exports/` | Its `docs/` follows the rule; the check runs in its tests |
-| Trial 2 | A second, larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
+| 0.3 | `/docs-reorg`, snapshot library | Used end to end on a trial repo |
+| Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
+| Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
 | Clean-up | Retire the older docs-generator template in the house standards repo | Nothing points to it |
 
-## 11. Open questions for the owner
+**Decided (2026-11-12):** 0.1 is built first and on its own, in this repo, with no connection to any trial repo. Trial 1 then adopts the tagged release; nothing in this repo is written for it.
 
-1. **Node only for 0.1?** Proposal: yes. A Python port only if a trial needs it.
-2. **Plugin name:** `docs-kit` for both the repo and the plugin?
-3. **Print engine:** `pandoc` only, or bundle a fallback?
-4. **Public from day one?** Other techsilon-oss kits are public. The fixture repo and examples must use invented names.
+## 11. Owner questions
+
+Answered 2026-11-12. **All four are Decided.**
+
+1. **Node only for 0.1?** Yes. A Python port only if a trial needs it.
+2. **Plugin name:** `docs-kit` for both the repo and the plugin.
+3. **Print engine:** `pandoc` only, no bundled fallback. Skipped with a message when absent (§6.5).
+4. **Public from day one?** Yes. The fixture repo and examples use invented names.
+
+Still open (answer before the work that depends on it): the details of §4.1 (front-matter key, whether the index is generated by `docs-kit index` or only checked).
 
 ## 12. Rules for work in this repo
 
