@@ -12,7 +12,7 @@ import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 const USAGE = `docs-kit ${VERSION}
 

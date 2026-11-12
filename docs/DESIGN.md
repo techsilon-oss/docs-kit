@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin, §6.7) is being built on `dev`. Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12. Later steps are not built yet.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
