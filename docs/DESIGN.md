@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Nothing is built yet. This file is the brief for the first build session.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 is in progress on `dev`: `docs-kit.json`, `check`, `move` and the hazard tests are built (see [CHANGELOG.md](../CHANGELOG.md)); how-tos by role (§4.1) waits on the details still open in §11.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
