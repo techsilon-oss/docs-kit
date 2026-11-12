@@ -1,0 +1,29 @@
+{
+  "name": "docs-kit",
+  "version": "0.1.0",
+  "description": "One layout for docs/, and the tools to keep it: a layout check and a doc mover that keeps every link and path working.",
+  "license": "MIT",
+  "author": "TechSilon LLC",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/techsilon-oss/docs-kit.git"
+  },
+  "bin": {
+    "docs-kit": "scripts/docs-kit.mjs"
+  },
+  "files": [
+    "scripts/",
+    "examples/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "check": "node scripts/docs-kit.mjs check"
+  }
+}

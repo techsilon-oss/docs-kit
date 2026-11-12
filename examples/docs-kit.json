@@ -1,0 +1,20 @@
+// docs-kit.json for an invented project, "example-app". Put it at the repo root.
+// Comments and trailing commas are allowed.
+{
+  "docsRoot": "docs",
+  "subjects": ["product", "platform", "operations", "testing", "money", "legal", "support", "notes", "archive"],
+  // Files allowed at the docs root besides the subject folders.
+  "rootAllowed": ["README.md", "PROJECT-HUB.md", "PRIORITY-ROADMAP.md"],
+  // Extra root entries another tool writes into, with the reason.
+  "rootAllowedTools": { "plans": "a planning plugin writes its plans here" },
+  // JSON files that list doc paths which must exist (doc-sync or gate maps).
+  "docMaps": [{ "file": "scripts/source-doc-map.json", "path": "mappings[].docs[]" }],
+  // Paths that must never move, with the reason (hazard H2).
+  "protected": { "docs/support": "path is a key in a production database" },
+  // Files the mover never edits (hazard H3).
+  "immutablePrefixes": ["db/migrations/"],
+  // Snapshot topic -> subject: docs/<subject>/snapshots/<topic>/<TOPIC>_<YYYY-MM-DD>.md
+  "snapshotTopics": { "architecture": "platform", "launch-readiness": "operations" },
+  "howtoStaleDays": 90,
+  "snapshotStaleDays": 30,
+}
