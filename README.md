@@ -2,7 +2,7 @@
 
 One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), snapshot routing for generated docs, and print copies.
 
-> **Status:** 0.1: the layout rule, `docs-kit.json`, `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
+> **Status:** 0.1.0 released 2026-11-12: the layout rule, `docs-kit.json`, `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
 
 ## Needs
 
@@ -16,6 +16,8 @@ Node 22 or later, and git. No runtime dependencies: the scripts use Node built-i
    ```sh
    npx github:techsilon-oss/docs-kit check
    ```
+
+   To pin a release, use `npx github:techsilon-oss/docs-kit#v0.1.0 check`.
 
 3. Move docs and keep every reference working. Try `--dry-run` first:
 
