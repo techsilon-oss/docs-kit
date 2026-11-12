@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix } from 'node:path';
 import { CONFIG_FILE, DEFAULTS, loadConfig, normalizeRel, parseConfig } from './config.mjs';
-import { listDocFiles, selectPath } from './check.mjs';
+import { check, listDocFiles, selectPath } from './check.mjs';
 import { trackedFiles } from './git.mjs';
 
 export class InitError extends Error {
@@ -298,13 +298,13 @@ export function planInit(root, { docsRoot, testFile, version } = {}) {
     if (!kind) throw new InitError(`--test: "${testFile}" must end in .js, .mjs, .cjs, .ts, .mts, .cts (vitest) or .py (pytest)`);
     if (t.startsWith('../') || posix.isAbsolute(t)) throw new InitError(`--test must be a path inside the repo, not "${testFile}"`);
     if (existsSync(join(root, t))) {
-      changes.push({ path: t, action: 'skip', why: 'exists' });
+      changes.push({ path: t, action: 'skip', why: 'exists', test: true });
     } else {
       const vendored = existsSync(join(root, 'scripts/docs-kit.mjs')) && !hasDep;
       const cli = vendored ? { path: 'scripts/docs-kit.mjs' }
         : hasDep ? { path: 'node_modules/docs-kit/scripts/docs-kit.mjs' }
           : { npx: `github:${UPSTREAM}#v${version}` };
-      changes.push({ path: t, action: 'create', why: `the layout check as a ${kind} test`, content: renderTest(kind, t, cli) });
+      changes.push({ path: t, action: 'create', why: `the layout check as a ${kind} test`, content: renderTest(kind, t, cli), test: true });
     }
   }
 
@@ -312,14 +312,41 @@ export function planInit(root, { docsRoot, testFile, version } = {}) {
 }
 
 /** Write the planned files. Only files planned as create or update are touched. */
-export function applyInit(root, plan) {
+export function applyInit(root, plan, { only = () => true } = {}) {
   for (const c of plan.changes) {
-    if (c.action === 'skip') continue;
+    if (c.action === 'skip' || !only(c)) continue;
     const abs = join(root, c.path);
     if (c.action === 'create' && existsSync(abs)) throw new InitError(`${c.path} appeared while init ran; init stopped before writing it`, { partial: true });
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, c.content);
   }
+}
+
+/**
+ * Plan, write (unless dryRun), and run the check with the configuration.
+ * The test file is written only when the check passes: a failing test would
+ * block every commit while the docs are being reorganised.
+ */
+export function runInit(root, { docsRoot, testFile, version, dryRun = false } = {}) {
+  const plan = planInit(root, { docsRoot, testFile, version });
+  if (!dryRun) applyInit(root, plan, { only: (c) => !c.test });
+  const result = check(root, plan.config);
+  if (dryRun) {
+    // The front door init would create is not on disk yet.
+    const front = plan.changes.find((c) => c.path === `${plan.config.docsRoot}/README.md` && c.action === 'create');
+    if (front) result.errors = result.errors.filter((e) => !e.startsWith(`${front.path}: missing`));
+    result.ok = result.errors.length === 0;
+  }
+  for (const c of plan.changes.filter((x) => x.test && x.action === 'create')) {
+    if (!result.ok) {
+      c.action = 'skip';
+      c.why = 'not yet: the check fails, and a failing test would block every commit';
+      c.deferred = true;
+    } else if (!dryRun) {
+      applyInit(root, plan, { only: (x) => x === c });
+    }
+  }
+  return { plan, result };
 }
 
 export function formatInit(plan, { dryRun = false } = {}) {
@@ -342,7 +369,10 @@ export function nextSteps(plan, result) {
   if (!plan.configExists) {
     steps.push(`Add to ${CONFIG_FILE} what only you know: "protected" paths (a doc path a database or another system uses as a key) and "roles" (who reads your how-tos).`);
   }
-  if (!plan.changes.some((c) => /\.(c|m)?[jt]s$|\.py$/.test(c.path) && c.action !== 'skip')) {
+  const deferred = plan.changes.find((c) => c.deferred);
+  if (deferred) {
+    steps.push(`Once the check passes, add it to your tests: docs-kit init --test ${deferred.path}`);
+  } else if (!plan.changes.some((c) => c.test)) {
     steps.push('Run the check in your tests: docs-kit init --test <file> (vitest .mjs/.ts or pytest .py).');
   }
   if (result && !result.ok) {

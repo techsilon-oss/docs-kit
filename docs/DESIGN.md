@@ -193,11 +193,11 @@ Node first. A Python port is a later option, only if a trial project needs it.
    - `protected` and `roles` stay empty: only the owner knows them. `init` says so.
 2. Adds `docs/README.md` (the front door) when it is missing.
 3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`.
-4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default.
+4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default. **The test is written only when the check passes.** While it fails, `init` skips the test and says so: a failing test would block every commit during the reorganisation. It goes in with the reorganisation's last slice (§6.3 step 5).
 5. Never overwrites, never commits, safe to run again. `--dry-run` lists the changes and writes nothing.
 6. Ends by running `check` with the new configuration. On a repo that does not follow the rule yet, the check fails; that is expected, is not an `init` failure (exit 0), and `init` points to the guided reorganisation (§6.3).
 
-**`/docs-kit-init`** (skill, in the plugin, §8). Runs `docs-kit init --dry-run`, shows the plan, and on the owner's yes runs it. Then it adds what needs judgement: explains each check finding, proposes `roles` and `protected` paths from what the repo shows, picks where the test goes and runs `init --test`, and offers the reorganisation steps (§6.3). It never moves a doc before the owner approves a proposal.
+**`/docs-kit-init`** (skill, in the plugin, §8). Runs `docs-kit init --dry-run`, shows the plan, and on the owner's yes runs it. Then it adds what needs judgement: explains each check finding, proposes `roles` and `protected` paths from what the repo shows (it writes `roles` only once how-tos exist, because `roles` with no how-tos fails the check), picks where the test goes and runs `init --test`, and offers the reorganisation steps (§6.3). It never moves a doc before the owner approves a proposal.
 
 ## 7. Hazards found in a real reorganisation
 

@@ -90,13 +90,34 @@ test('init on a messy repo: writes the config and package.json, the check fails,
   assert.ok(pkg.endsWith('}\n'));
 }));
 
-test('init twice: the second run changes nothing', withRepo(MESSY, (root) => {
-  assert.equal(run(root, 'init', '--test', 'tests/docs-layout.test.mjs').status, 0);
+// A docs folder that already follows the layout: the check passes.
+const TIDY = {
+  ...MESSY,
+  'docs/architecture/README.md': '# Architecture\n',
+  'docs/guides/README.md': '# Guides\n',
+  'docs/platform/README.md': '# Platform\n',
+  'docs/archive/README.md': '# Archive\n',
+};
+delete TIDY['docs/ONBOARDING.md'];
+
+test('init twice: the second run changes nothing', withRepo(TIDY, (root) => {
+  const first = run(root, 'init', '--test', 'tests/docs-layout.test.mjs');
+  assert.equal(first.status, 0, first.stderr);
+  assert.match(first.stdout, /created {2}tests\/docs-layout\.test\.mjs/);
   const before = { cfg: read(root, 'docs-kit.json'), pkg: read(root, 'package.json'), t: read(root, 'tests/docs-layout.test.mjs'), st: status(root) };
   const again = run(root, 'init', '--test', 'tests/docs-layout.test.mjs');
   assert.equal(again.status, 0, again.stderr);
   assert.doesNotMatch(again.stdout, /created|updated/);
   assert.deepEqual({ cfg: read(root, 'docs-kit.json'), pkg: read(root, 'package.json'), t: read(root, 'tests/docs-layout.test.mjs'), st: status(root) }, before);
+}));
+
+test('init --test waits while the check fails: a failing test would block every commit', withRepo(MESSY, (root) => {
+  const r = run(root, 'init', '--test', 'tests/docs-layout.test.mjs');
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(!exists(root, 'tests/docs-layout.test.mjs'), 'no failing test written');
+  assert.ok(exists(root, 'docs-kit.json'), 'the rest of the setup is written');
+  assert.match(r.stdout, /skip {5}tests\/docs-layout\.test\.mjs {2}\(not yet: the check fails/);
+  assert.match(r.stdout, /Once the check passes, add it to your tests: docs-kit init --test tests\/docs-layout\.test\.mjs/);
 }));
 
 test('init never overwrites: an existing config, front door and test file are kept', withRepo({

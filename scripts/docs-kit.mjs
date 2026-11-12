@@ -7,7 +7,7 @@ import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_FILE, ConfigError, DEFAULTS, loadConfig } from './lib/config.mjs';
 import { check, formatCheck, listDocFiles, parseDate } from './lib/check.mjs';
-import { InitError, applyInit, formatInit, nextSteps, planInit } from './lib/init.mjs';
+import { InitError, formatInit, nextSteps, runInit } from './lib/init.mjs';
 import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
 import { writeIndex } from './lib/roles.mjs';
@@ -72,16 +72,8 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
       const testFile = takeValue(args, '--test');
       if (args.length) throw new UsageError(`unexpected argument "${args[0]}"`);
       if (!repoRootOf(cwd)) throw new UsageError('init must run inside a git repository');
-      const plan = planInit(root, { docsRoot, testFile, version: VERSION });
-      if (!dryRun) applyInit(root, plan);
+      const { plan, result } = runInit(root, { docsRoot, testFile, version: VERSION, dryRun });
       out(formatInit(plan, { dryRun }));
-      const result = check(root, plan.config);
-      if (dryRun) {
-        // The front door init would create is not on disk yet.
-        const front = plan.changes.find((c) => c.path === `${plan.config.docsRoot}/README.md` && c.action === 'create');
-        if (front) result.errors = result.errors.filter((e) => !e.startsWith(`${front.path}: missing`));
-        result.ok = result.errors.length === 0;
-      }
       out('');
       out(formatCheck(result, plan.config.docsRoot));
       out(nextSteps(plan, result));

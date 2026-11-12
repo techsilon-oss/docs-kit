@@ -8,6 +8,20 @@ One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a
 
 Node 22 or later, and git. No runtime dependencies: the scripts use Node built-ins only.
 
+## Two ways to set it up
+
+- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It runs `docs-kit init`, explains what the check found, proposes the `roles` and `protected` paths, and offers the guided reorganisation. It never commits and never moves a doc without your yes.
+
+  ```sh
+  /plugin install docs-kit --marketplace techsilon-oss/docs-kit
+  ```
+
+  Or from a terminal: `claude plugin marketplace add techsilon-oss/docs-kit`, then `claude plugin install docs-kit`.
+
+- **Anywhere else: `docs-kit init`**, with Node and nothing else. The steps are below.
+
+Both run the same `init`, so they give the same files.
+
 ## Use it
 
 1. Set it up, from the repo root. See what it would do first:
@@ -50,7 +64,7 @@ Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same r
 
 `protected` and `roles` stay empty: only you know them. Add them before you move anything.
 
-It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`.
+It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`. It does so only when the check passes; while it fails, a test would block every commit, so `init` skips it and says to run `init --test` again once the check passes.
 
 - It never overwrites a file, never commits, and does not run `npm install`. Running it again changes nothing.
 - `--dry-run` lists what it would do and writes nothing.

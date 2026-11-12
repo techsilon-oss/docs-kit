@@ -1,0 +1,20 @@
+{
+  "name": "docs-kit",
+  "description": "One layout for docs/ in any repo: set it up with /docs-kit-init, check it, and move docs without breaking a link or path.",
+  "version": "0.1.0",
+  "author": {
+    "name": "TechSilon LLC",
+    "email": "oss@techsilon.com",
+    "url": "https://techsilon.com"
+  },
+  "homepage": "https://github.com/techsilon-oss/docs-kit#readme",
+  "repository": "https://github.com/techsilon-oss/docs-kit",
+  "license": "MIT",
+  "keywords": [
+    "docs",
+    "documentation",
+    "layout",
+    "how-to",
+    "claude-code"
+  ]
+}
