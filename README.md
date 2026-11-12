@@ -10,14 +10,22 @@ Node 22 or later, and git. No runtime dependencies: the scripts use Node built-i
 
 ## Use it
 
-1. Put a `docs-kit.json` at the repo root. Start from [examples/docs-kit.json](examples/docs-kit.json); every key is described in [DESIGN §5](docs/DESIGN.md#5-configuration-docs-kitjson).
+1. Set it up, from the repo root. See what it would do first:
+
+   ```sh
+   npx github:techsilon-oss/docs-kit init --dry-run
+   npx github:techsilon-oss/docs-kit init --test tests/docs-layout.test.mjs
+   ```
+
+   `init` writes a `docs-kit.json` that describes your docs folder as it is today, adds the front door `docs/README.md` if it is missing, and, with a `package.json`, adds `docs-kit` as a devDependency pinned to the release and a `docs:check` script. Then run `npm install`. See [`docs-kit init`](#docs-kit-init) below.
+
 2. Run the check:
 
    ```sh
-   npx github:techsilon-oss/docs-kit check
+   npm run docs:check        # or: npx github:techsilon-oss/docs-kit check
    ```
 
-   To pin a release, use `npx github:techsilon-oss/docs-kit#v0.1.0 check`.
+   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.1.0 check`.
 
 3. Move docs and keep every reference working. Try `--dry-run` first:
 
@@ -27,6 +35,27 @@ Node 22 or later, and git. No runtime dependencies: the scripts use Node built-i
    ```
 
 To vendor instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo, keep the banner and `VERSION` in `docs-kit.mjs`, and send fixes back here.
+
+## `docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]`
+
+Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same result.
+
+| It finds | It writes in `docs-kit.json` |
+|---|---|
+| The folders at the docs root | `subjects` |
+| Docs-root files another tool's manifest names (for example the hub and roadmap in `govkit.json`) | `rootAllowed`, so that tool keeps working |
+| `scripts/source-doc-map.json`, when it lists doc paths | `docMaps` |
+| Migration folders (`supabase/migrations/`, `db/migrations/`, ...) and files another tool vendors with a checksum (`govkit.json` `files`) | `immutablePrefixes`, so `move` never edits them |
+| `<subject>/snapshots/<topic>/` folders | `snapshotTopics` |
+
+`protected` and `roles` stay empty: only you know them. Add them before you move anything.
+
+It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`.
+
+- It never overwrites a file, never commits, and does not run `npm install`. Running it again changes nothing.
+- `--dry-run` lists what it would do and writes nothing.
+- It ends by running `check`. On a docs folder that does not follow the layout yet, the check fails; that is expected, and `init` still exits 0. Reorganise with `move`, following [DESIGN §6.3](docs/DESIGN.md#63-guided-reorganisation--docs-reorg-skill).
+- Exit 2 for wrong arguments, or outside a git repository; nothing is written.
 
 ## `docs-kit check`
 
