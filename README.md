@@ -2,7 +2,7 @@
 
 One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), snapshot routing for generated docs, and print copies.
 
-> **Status:** 0.1 in progress: the layout rule, `docs-kit.json`, `check` and `move` are built; how-tos by role (DESIGN §4.1) is next. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
+> **Status:** 0.1: the layout rule, `docs-kit.json`, `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
 
 ## Needs
 
@@ -41,10 +41,25 @@ Exit 0 when the layout rule holds (warnings allowed), 1 with a list when it does
 | A how-to whose `last_checked` is missing or older than `howtoStaleDays` | warning |
 | More than one print copy of a doc, or a print copy with no source beside it | warning |
 | Archive content not under `archive/<subject>/` | warning |
+| With `roles` configured: a how-to with no `roles:` or an unknown role; a missing or out-of-date "How-tos by role" section; no how-tos at all | error |
 
 Options: `--json` for machine-readable output, `--today YYYY-MM-DD` to fix the date used for freshness.
 
 To run it in your tests, see [examples/vitest](examples/vitest/docs-layout.test.mjs) and [examples/pytest](examples/pytest/test_docs_layout.py).
+
+## `docs-kit index`
+
+Writes the **How-tos by role** section of `docs/README.md` (DESIGN §4.1), so a reader finds the steps for their own role without knowing the subject folders. List the roles once in `docs-kit.json` (`"roles": ["customer", "support", "admin"]`) and name them in each how-to:
+
+```markdown
+---
+title: Reset a password
+last_checked: 2026-11-01
+roles: [customer, support]
+---
+```
+
+The section sits between `<!-- docs-kit:howtos-by-role:start -->` and `<!-- docs-kit:howtos-by-role:end -->`; the first run adds it at the end of the file. Do not edit it by hand: `check` fails when it differs from what `index` would write. Run `index` after you add a how-to or change its `roles` or `title`.
 
 ## `docs-kit move <old> <new> [<old> <new> ...] [--dry-run]`
 

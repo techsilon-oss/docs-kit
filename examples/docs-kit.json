@@ -17,4 +17,6 @@
   "snapshotTopics": { "architecture": "platform", "launch-readiness": "operations" },
   "howtoStaleDays": 90,
   "snapshotStaleDays": 30,
+  // Roles that how-tos may name; `docs-kit index` lists the how-tos by role.
+  "roles": ["customer", "support", "admin"],
 }

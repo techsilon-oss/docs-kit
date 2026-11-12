@@ -9,6 +9,7 @@ All notable changes to docs-kit. The format follows [Keep a Changelog](https://k
 - `docs-kit.json` configuration (JSON with comments), with `snapshotStaleDays` added to the keys in DESIGN §5.
 - `docs-kit check`: the layout check (DESIGN §6.1), with `--json` and `--today`.
 - `docs-kit move`: the mover (DESIGN §6.2), with `--dry-run`.
+- How-tos by role (DESIGN §4.1): a `roles` list in `docs-kit.json`, `roles:` in each how-to's front matter, `docs-kit index` to write the "How-tos by role" section of `docs/README.md`, and `check` rules that keep it correct.
 - A fixture repo that reproduces hazards H1 to H10, and a test for each guard.
 - Examples: `docs-kit.json`, and the check wrapped as a vitest and a pytest test.
 
