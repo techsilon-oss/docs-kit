@@ -46,13 +46,6 @@ test('the skill only uses init options the CLI has', () => {
   for (const opt of named) assert.ok(cli.includes(`takeFlag(args, '${opt}')`) || cli.includes(`takeValue(args, '${opt}')`), opt);
 });
 
-test('the skill pre-approves only reads: committing, pushing and installing go through the owner', () => {
-  const tools = /^allowed-tools: (.*)$/m.exec(text(SKILL).replace(/\r\n/g, '\n'))[1];
-  for (const bad of ['git commit', 'git push', 'git add', 'git switch', 'npm install', 'npm i ', 'Write', 'Edit']) {
-    assert.ok(!tools.includes(bad), `allowed-tools pre-approves "${bad}"`);
-  }
-});
-
 test('every finding the skill explains is a message the check prints', () => {
   const s = text(SKILL);
   const table = s.slice(s.indexOf('| Finding |'), s.indexOf('Then read the "Found:" lines'));
@@ -63,13 +56,13 @@ test('every finding the skill explains is a message the check prints', () => {
 });
 
 // /pin (DESIGN §6.4): project-neutral, calls docs-kit, and its how-to template passes the check.
-const PIN = 'skills/pin/SKILL.md';
+const PIN = 'skills/docs-kit-pin/SKILL.md';
 
 test('/pin: front matter, and only docs-kit commands the CLI has', () => {
   const s = text(PIN);
   const fm = /^---\n([\s\S]*?)\n---\n/.exec(s.replace(/\r\n/g, '\n'));
   assert.ok(fm, 'front matter');
-  assert.match(fm[1], /^name: pin$/m);
+  assert.match(fm[1], /^name: docs-kit-pin$/m);
   assert.match(fm[1], /^description: .{40,}$/m);
   const cli = text('scripts/docs-kit.mjs');
   const cmds = new Set([...s.matchAll(/DOCS_KIT (\w+)/g)].map((m) => m[1]));
@@ -80,13 +73,8 @@ test('/pin: front matter, and only docs-kit commands the CLI has', () => {
   }
 });
 
-test('/pin: project-neutral, and pre-approves no commit, push or install', () => {
-  const s = text(PIN);
-  assert.doesNotMatch(s, /scripts\/docs-print|\.py\b/, 'no project script: printing goes through docs-kit print');
-  const tools = /^allowed-tools: (.*)$/m.exec(s.replace(/\r\n/g, '\n'))[1];
-  for (const bad of ['git commit', 'git push', 'git add', 'npm install', 'Bash(git *)', 'Bash(pandoc']) {
-    assert.ok(!tools.includes(bad), `allowed-tools pre-approves "${bad}"`);
-  }
+test('/docs-kit-pin: project-neutral, prints through docs-kit print', () => {
+  assert.doesNotMatch(text(PIN), /scripts\/docs-print|\.py\b/, 'no project script: printing goes through docs-kit print');
 });
 
 test('/pin: a how-to written from its template passes the check and is indexed by role', async () => {
@@ -94,7 +82,7 @@ test('/pin: a how-to written from its template passes the check and is indexed b
   const { loadConfig } = await import('../scripts/lib/config.mjs');
   const { cleanup, makeFixture } = await import('./helpers/fixture.mjs');
   const s = text(PIN).replace(/\r\n/g, '\n');
-  const block = /## `\/pin --howto[\s\S]*?```yaml\n([\s\S]*?)```/.exec(s)[1].replace(/^ {3}/gm, '');
+  const block = /## `\/docs-kit-pin --howto[\s\S]*?```yaml\n([\s\S]*?)```/.exec(s)[1].replace(/^ {3}/gm, '');
   const fm = block
     .replace('How to <task>', 'How to rotate a key')
     .replace('<YYYY-MM-DD>', '2026-11-01')
@@ -111,4 +99,57 @@ test('/pin: a how-to written from its template passes the check and is indexed b
     assert.deepEqual(r.errors, [], r.errors.join('\n'));
     assert.match(readFileSync(`${root}/docs/README.md`, 'utf8'), /### admin\n\n(?:- .*\n)*- \[How to rotate a key\]\(operations\/howto\/HOWTO-rotate-a-key\.md\)/);
   } finally { cleanup(root); }
+});
+
+
+// The techsilon-oss kit standard (KIT-STANDARD.md, "Plugin kits"), for every skill.
+const { readdirSync } = await import('node:fs');
+const skills = readdirSync(at('skills')).map((dir) => {
+  const body = text(`skills/${dir}/SKILL.md`).replace(/\r\n/g, '\n');
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(body)[1];
+  const field = (k) => (new RegExp(`^${k}: (.*)$`, 'm').exec(fm) || [])[1];
+  return { dir, body, name: field('name'), description: field('description') || '', tools: field('allowed-tools') || '' };
+});
+
+test('kit standard: every skill name starts with docs-kit-, except a dated alias for a renamed skill', () => {
+  for (const s of skills) {
+    assert.equal(s.name, s.dir, `${s.dir}: the name matches the folder`);
+    if (s.name.startsWith('docs-kit-')) continue;
+    const m = /^Renamed to \/(docs-kit-[a-z-]+) in docs-kit [\d.]+\. This alias runs it, and is removed in the first release on or after (\d{4}-\d{2}-\d{2})\.$/.exec(s.description);
+    assert.ok(m, `${s.dir}: a bare name is allowed only as a dated alias`);
+    assert.ok(skills.some((t) => t.name === m[1]), `${s.dir}: the alias points at /${m[1]}, which exists`);
+    assert.ok(new Date() < new Date(m[2]), `${s.dir}: the alias was due for removal on ${m[2]}; remove it`);
+  }
+});
+
+test('kit standard: allowed-tools pre-approves only the plugin\'s own scripts, and read-only tools', () => {
+  for (const s of skills) {
+    for (const t of s.tools.match(/Bash\([^)]*\)|\S+/g) || []) {
+      if (['Read', 'Glob', 'Grep'].includes(t)) continue;
+      assert.match(t, /^Bash\(node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/[a-z-]+\.mjs" [^*\s]/, `${s.dir}: "${t}" is not one of the plugin's own scripts`);
+    }
+  }
+});
+
+test('kit standard: a read-only /docs-kit-help, and a plugin description that ends with it', () => {
+  const help = skills.find((s) => s.name === 'docs-kit-help');
+  assert.ok(help, '/docs-kit-help exists');
+  assert.equal(help.tools.trim(), 'Read Grep Glob', 'it reads, and runs nothing');
+  for (const p of ['docs/FAQ.md', 'docs/UPGRADING.md', 'docs/reference/COMMANDS.md', 'docs/guides/howto']) {
+    assert.ok(help.body.includes(p) && existsSync(at(p)), `it answers from ${p}, which ships`);
+  }
+  assert.match(json('.claude-plugin/plugin.json').description, / Help: \/docs-kit-help$/);
+});
+
+test('kit standard: Apache-2.0 with a NOTICE, in every manifest, and shipped with the package', () => {
+  assert.match(text('LICENSE'), /Apache License\s+Version 2\.0, January 2004/);
+  assert.match(text('NOTICE').replace(/\r\n/g, '\n'), /^docs-kit\nCopyright \d{4} Techsilon LLC\n/);
+  assert.equal(json('package.json').license, 'Apache-2.0');
+  assert.equal(json('.claude-plugin/plugin.json').license, 'Apache-2.0');
+  for (const f of ['LICENSE', 'NOTICE', 'docs/']) assert.ok(json('package.json').files.includes(f), `package.json files has ${f}`);
+  assert.equal(json('.claude-plugin/plugin.json').author.name, 'Techsilon LLC');
+});
+
+test('kit standard: package.json names Techsilon LLC and the org email', () => {
+  assert.equal(json('package.json').author, 'Techsilon LLC <oss@techsilon.com>');
 });

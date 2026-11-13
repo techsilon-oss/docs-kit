@@ -1,0 +1,41 @@
+# docs-kit's own CI: the tests, its own docs, the plugin manifests, and the kit
+# standard's DCO and plain-words checks. Actions minutes are free on public repos.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax-check every script
+        run: find . -name '*.mjs' -not -path './.git/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
+
+      # The tests also run docs-kit check on docs-kit's own docs/, and every command the docs show.
+      - name: Tests
+        run: npm test
+
+      # Pinned, so this required check does not break when Claude Code releases. Raise the pin in its own PR.
+      - name: Validate the plugin and the marketplace manifests
+        run: |
+          npx -y @anthropic-ai/claude-code@2.1.312 plugin validate .
+          npx -y @anthropic-ai/claude-code@2.1.312 plugin validate .claude-plugin/marketplace.json
+
+  dco:
+    uses: techsilon-oss/.github/.github/workflows/dco.yml@main
+
+  plain-words:
+    uses: techsilon-oss/.github/.github/workflows/plain-words.yml@main
