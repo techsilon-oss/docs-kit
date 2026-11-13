@@ -153,3 +153,18 @@ test('kit standard: Apache-2.0 with a NOTICE, in every manifest, and shipped wit
 test('kit standard: package.json names Techsilon LLC and the org email', () => {
   assert.equal(json('package.json').author, 'Techsilon LLC <oss@techsilon.com>');
 });
+
+test('every skill runs only docs-kit commands and options the CLI has', () => {
+  const cli = text('scripts/docs-kit.mjs');
+  const used = new Set();
+  for (const s of skills) {
+    for (const m of s.body.matchAll(/DOCS_KIT ([a-z]+)((?: [^`\n]*)?)/g)) {
+      used.add(m[1]);
+      assert.ok(cli.includes(`cmd === '${m[1]}'`), `${s.dir}: docs-kit ${m[1]}`);
+      for (const opt of m[2].match(/--[a-z-]+/g) || []) {
+        assert.ok(cli.includes(`takeValue(args, '${opt}')`) || cli.includes(`takeFlag(args, '${opt}')`), `${s.dir}: docs-kit ${m[1]} ${opt}`);
+      }
+    }
+  }
+  for (const c of ['audit', 'check', 'move', 'init', 'index', 'print']) assert.ok(used.has(c), `a skill uses docs-kit ${c}`);
+});

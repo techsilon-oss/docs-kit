@@ -14,7 +14,7 @@ last_checked: 2026-11-13
 
 ## Steps for a repo
 
-1. In `package.json`, change the devDependency to the new tag, for example `github:techsilon-oss/docs-kit#v0.3.1`.
+1. In `package.json`, change the devDependency to the new tag, for example `github:techsilon-oss/docs-kit#v0.4.0`.
 2. In a terminal, in the root folder of your repo, run `npm install`.
 3. Run the check:
 

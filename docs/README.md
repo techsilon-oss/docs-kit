@@ -2,7 +2,7 @@
 
 Where to find things. Each subject folder has a `README.md` that maps it.
 
-- [guides](guides/README.md): how-tos to adopt, reorganise, print, upgrade and remove docs-kit.
+- [guides](guides/README.md): how-tos to adopt, reorganise, route generated docs, print, upgrade and remove docs-kit.
 - [reference](reference/README.md): every command, option, finding and exit code.
 
 At the docs root:

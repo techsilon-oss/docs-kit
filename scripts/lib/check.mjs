@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { frontMatter } from './frontmatter.mjs';
-import { repoRootOf, trackedFiles, untrackedFiles } from './git.mjs';
+import { checkIgnored, repoRootOf, trackedFiles, untrackedFiles } from './git.mjs';
 import { checkRoles } from './roles.mjs';
 
 export const SNAPSHOT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*_(\d{4}-\d{2}-\d{2})\.[A-Za-z0-9]+$/;
@@ -66,7 +66,7 @@ export function check(root, cfg, { today = new Date() } = {}) {
   const warnings = [];
   const todayMs = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   const D = cfg.docsRoot;
-  const stats = { docs: 0, docMapEntries: 0, snapshots: 0, howtos: 0 };
+  const stats = { docs: 0, docMapEntries: 0, snapshots: 0, howtos: 0, localOnlyTopics: [] };
 
   if (!existsSync(join(root, D)) || !statSync(join(root, D)).isDirectory()) {
     errors.push(`docs root "${D}/" does not exist`);
@@ -203,6 +203,13 @@ export function check(root, cfg, { today = new Date() } = {}) {
   }
   for (const [topic, subject] of Object.entries(cfg.snapshotTopics)) {
     const key = `${subject}/snapshots/${topic}`;
+    // A topic whose folder git ignores is made on demand and never committed: CI cannot see its
+    // snapshots, so it is reported as local-only instead of failing H10.
+    const probe = `${D}/${key}/PROBE_2000-01-01.md`;
+    if (repoRootOf(root) && checkIgnored(root, [probe]).has(probe)) {
+      stats.localOnlyTopics.push(topic);
+      continue;
+    }
     if (!snapshotGroups.has(key)) {
       // H10: a configured snapshot topic with no snapshots means a path changed or the generator stopped.
       errors.push(`${D}/${key}/: snapshot topic "${topic}" is configured but has no dated snapshots`);
@@ -271,7 +278,7 @@ export function formatCheck(result, D = 'docs') {
   const s = result.stats;
   lines.push(
     result.ok
-      ? `docs-kit check: OK (${s.docs} files under ${D}/, ${s.docMapEntries} doc-map entries, ${s.snapshots} snapshots, ${s.howtos} how-tos; ${result.warnings.length} warning(s))`
+      ? `docs-kit check: OK (${s.docs} files under ${D}/, ${s.docMapEntries} doc-map entries, ${s.snapshots} snapshots, ${s.howtos} how-tos; ${result.warnings.length} warning(s))${s.localOnlyTopics?.length ? `\nNot checked: ${s.localOnlyTopics.length} snapshot topic(s) whose folder git ignores (made on demand, never committed): ${s.localOnlyTopics.join(', ')}` : ''}`
       : `docs-kit check: FAILED with ${result.errors.length} error(s), ${result.warnings.length} warning(s)`,
   );
   return lines.join('\n');

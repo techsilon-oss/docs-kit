@@ -2,6 +2,20 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.4.0] - 2026-11-13
+
+### Added
+
+- `/docs-kit-reorg`: the guided reorganisation (DESIGN §6.3). It audits the docs, writes one proposal that applies the least-change defaults, asks the owner only for the roles and one approval, then moves the docs in slices, routes generators through `docs-kit snapshot`, and adds the check to the tests.
+- `docs-kit audit [--json]`: a read-only inventory before a reorganisation: the docs root and its folders, exports trees, code inside the docs folder, generators, ignored files and `.gitignore` rules, docs that immutable files name, agent instructions, how-to look-alikes, and every reference to a doc from outside the docs folder.
+- `docs-kit snapshot path <topic>` and `docs-kit snapshot archive <topic>` (DESIGN §6.6): where a generator in any language writes today's snapshot, and archiving the older ones to `archive/<subject>/snapshots/<topic>/`. The archive refuses any other folder (hazard H1), and fails loudly when an ignored snapshot would become visible (hazard H4).
+- How-to: [Route generated docs to snapshots](docs/guides/howto/HOWTO-route-generated-docs.md), with Python and Node examples that the tests run.
+
+### Changed
+
+- `check`: a snapshot topic whose folder git ignores is reported as local-only, instead of failing as "no dated snapshots".
+- `/docs-kit-init` hands the reorganisation to `/docs-kit-reorg`.
+
 ## [0.3.1] - 2026-11-13
 
 docs-kit now follows the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md). See [Upgrading](docs/UPGRADING.md#031).

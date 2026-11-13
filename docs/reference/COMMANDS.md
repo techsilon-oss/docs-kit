@@ -6,9 +6,11 @@ How to run `docs-kit`: `npm run docs:check` and `npx docs-kit <command>` once it
 
 - [`docs-kit init`](#docs-kit-init)
 - [`docs-kit check`](#docs-kit-check)
+- [`docs-kit audit`](#docs-kit-audit)
 - [`docs-kit index`](#docs-kit-index)
 - [`docs-kit move`](#docs-kit-move)
 - [`docs-kit print`](#docs-kit-print)
+- [`docs-kit snapshot`](#docs-kit-snapshot)
 - [Hazards](#hazards)
 
 ## `docs-kit init`
@@ -61,6 +63,26 @@ Exit 0 when the layout rule holds (warnings allowed), 1 with a list when it does
 Options: `--json` for machine-readable output, `--today YYYY-MM-DD` to fix the date used for freshness.
 
 To run it in your tests, see [examples/vitest](../../examples/vitest/docs-layout.test.mjs) and [examples/pytest](../../examples/pytest/test_docs_layout.py).
+
+## `docs-kit audit`
+
+```text
+docs-kit audit [--json]
+```
+
+The read-only inventory a reorganisation starts from (DESIGN §6.3, step 1). It changes nothing. It works before `init` too, with the default settings.
+
+| It lists | Why |
+|---|---|
+| The docs root: the files the layout allows, the files that must move, each folder with its size, whether it is a subject, and whether it has a map | The work the reorganisation has to do |
+| `exports/` trees, code inside the docs folder, and code outside it that names a doc and writes files | Generated docs, and the generators that make them |
+| Files git ignores under the docs folder, by folder, and the `.gitignore` rules that name it | Generated or confidential files that must stay ignored (hazard H4) |
+| Docs that immutable files name, and the protected paths | What must not move (default L3, hazard H2) |
+| Agent instructions that name a doc | Starting points that stay in place (default L5) |
+| Docs whose name looks like a how-to, outside a `howto/` folder | How-to candidates (default L6) |
+| Every doc that a file outside the docs folder names by its repo-root path, with those files | What `move` will rewrite |
+
+`--json` prints the same report as JSON. Exit 0; 2 outside a git repository.
 
 ## `docs-kit index`
 
@@ -121,6 +143,21 @@ Makes `.docx` and `.pdf` print copies beside the source, named `<NAME>_v<X.Y>_<Y
 - A `.pdf` needs a PDF engine for pandoc (for example a LaTeX install). A format that fails keeps its older copy and says why.
 - It warns about tables with more than five columns, which may run off the page.
 - Without pandoc, it skips printing with a message and exits 0. Exit 1 when pandoc ran and made no copy, 2 for wrong arguments.
+
+## `docs-kit snapshot`
+
+```text
+docs-kit snapshot path <topic> [--date YYYY-MM-DD] [--ext md]
+docs-kit snapshot archive <topic> [--keep N] [--dry-run]
+```
+
+Routes generated docs (DESIGN §6.6). A generator in any language calls these, so every generator follows one rule: `<docsRoot>/<subject>/snapshots/<topic>/<TOPIC>_<YYYY-MM-DD>.<ext>`. The topics and their subjects are in `snapshotTopics` in `docs-kit.json`.
+
+- **`path`** prints where today's snapshot of a topic goes, for example `docs/operations/snapshots/status/STATUS_2026-11-13.md`. `--date` sets the date, `--ext` the file extension. It writes nothing; the generator creates the folder and the file. An unknown topic is an error, never a default folder.
+- **`archive`** keeps the snapshots of the newest date (`--keep N` keeps the newest N dates) and moves the older ones to `<docsRoot>/archive/<subject>/snapshots/<topic>/`. A tracked file moves with `git mv`. It leaves alone a file that is not a dated snapshot, and refuses any folder that is not a configured `snapshots/<topic>/` folder (hazard H1).
+- **Gitignored snapshots.** If git ignores the topic folder, its snapshots are made on demand and never committed. `check` then reports the topic as local-only instead of "no dated snapshots". When `archive` moves an ignored file to a place git does not ignore, it says `DANGER` and exits 1: add a `.gitignore` rule for the archive folder before you stage anything (hazard H4).
+
+Exit 0 when done; 1 when an ignored file is no longer ignored; 2 for an unknown topic, a refused folder or wrong arguments (nothing moved).
 
 ## Hazards
 

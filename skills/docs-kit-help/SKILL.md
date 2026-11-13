@@ -9,11 +9,11 @@ allowed-tools: Read Grep Glob
 
 Answer the user's question about docs-kit **only from the docs that ship in this plugin**, for the version they have installed. Those docs describe exactly what they run. The web, or your memory of docs-kit, may describe another version.
 
-**This skill reads; it never runs anything.** No Bash, no edits, no network. If the answer is "run X", tell the user to run it, or point at the skill that does it (`/docs-kit-init`, `/docs-kit-pin`).
+**This skill reads; it never runs anything.** No Bash, no edits, no network. If the answer is "run X", tell the user to run it, or point at the skill that does it (`/docs-kit-init`, `/docs-kit-reorg`, `/docs-kit-pin`).
 
 ## Steps
 
-1. **The version.** Read `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`, key `version`. Say it in the answer ("in docs-kit 0.3.1, …").
+1. **The version.** Read `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`, key `version`. Say it in the answer ("in docs-kit 0.4.0, …").
 2. **Find the answer**, in this order, all under `${CLAUDE_PLUGIN_ROOT}`:
    1. `docs/FAQ.md`: short answers, each pointing at its guide.
    2. `docs/guides/howto/`: the steps to adopt, reorganise, print, upgrade and remove.

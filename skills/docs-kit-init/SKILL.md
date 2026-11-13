@@ -96,13 +96,7 @@ The setup is safe to commit while the check fails: `init` adds no failing test, 
 
 If the check passed, the setup is done: say so, and stop.
 
-If it failed, ask one question: "Start the reorganisation with a read-only audit?" (Recommended), or stop here. On a yes, follow DESIGN §6.3 of docs-kit (https://github.com/techsilon-oss/docs-kit/blob/main/docs/DESIGN.md):
-
-1. **Audit**, read-only: every file under the docs root, every doc path named outside it, generators, `.gitignore` rules, path-based keys, and paths built in pieces.
-2. **Proposal**, saved as a dated note in `docs/notes/`: the subject list, an old → new table for every file, protected paths with reasons, the roles from step 2, the hazards found, and the slices (one pull request each). Apply the least-change defaults (DESIGN §6.3, L1 to L10) and list the ones you applied, so the owner can override any. Add the note itself to `immutablePrefixes` in the same commit (L10): it records the old paths, and `move` must not rewrite it.
-3. **The owner approves** the proposal once. Ask about `roles` before that, if the repo will have how-tos; ask nothing else a default settles. Nothing moves before the approval.
-4. **Each slice:** `DOCS_KIT move <old> <new> --dry-run`, then `move`, then the project's tests and `DOCS_KIT check`. Stage everything `git status` lists, not only the docs folders. Open the pull request.
-5. **Close:** once the check passes, run `DOCS_KIT init --test <path>` with the path from step 2, so the check runs in the tests; add `roles` and run `DOCS_KIT index` if the how-tos exist. Record the decision in the project's decision log.
+If it failed, ask one question: "Start the reorganisation with `/docs-kit-reorg`?" (Recommended), or stop here. On a yes, follow `/docs-kit-reorg` ([`../docs-kit-reorg/SKILL.md`](../docs-kit-reorg/SKILL.md)) from its step 1. It runs a read-only audit, writes one proposal, and asks the owner only for the roles and one approval before anything moves. Pass on what this skill found: the test path from step 2, and the roles you noted.
 
 ## If something fails
 

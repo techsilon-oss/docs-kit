@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/docs-kit-pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. v0.3.1 (2026-11-13) brings docs-kit in line with the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md): skill names with the `docs-kit-` prefix, `/docs-kit-help`, pre-approval of the plugin's own scripts only, Apache-2.0, and docs that follow the layout. Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/docs-kit-pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. v0.3.1 (2026-11-13) brings docs-kit in line with the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md): skill names with the `docs-kit-` prefix, `/docs-kit-help`, pre-approval of the plugin's own scripts only, Apache-2.0, and docs that follow the layout. Step 0.4 (`/docs-kit-reorg`, `docs-kit audit`, `docs-kit snapshot`) is v0.4.0; its done-when is Trial 2. Later steps are not built yet.
 > **Owner:** Techsilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -146,9 +146,9 @@ For each pair (file or folder):
 
 ### 6.3 Guided reorganisation — `/docs-kit-reorg` (skill)
 
-For a repo that does not follow the rule. Never moves anything before the owner approves the proposal.
+For a repo that does not follow the rule. Never moves anything before the owner approves the proposal. **Built in 0.4** as `/docs-kit-reorg`, with `docs-kit audit` for step 1.
 
-1. **Audit** (read-only): inventory every file under `docs/` and every doc path referenced outside it; group by likely subject; find generators, gitignore rules, path-based keys and pieced-together paths (the hazard list is the checklist).
+1. **Audit** (read-only, `docs-kit audit`): inventory every file under `docs/` and every doc path referenced outside it; group by likely subject; find generators, gitignore rules, path-based keys and pieced-together paths (the hazard list is the checklist).
 2. **Proposal:** the subject list, the old → new table, the protected paths with reasons, the hazards found, and the slices. Written as a pin (`docs/notes/`) so it survives the session. It applies the least-change defaults below and lists each one it applied, so the owner can override any of them.
 3. **Owner approves** the whole proposal once. The only question asked before that is the `roles` list, when the repo will have how-tos. Each slice's pull request is then merged by the owner as usual; a slice raises a new question only when the check, the tests or `move` show something the proposal did not foresee.
 4. **Slices:** one pull request per slice (for example: front door and READMEs; one subject per slice; generators last). Each slice: `move --dry-run`, `move`, run the project's tests and `check`, stage everything changed, confirm a clean working tree, open the PR.
@@ -194,11 +194,14 @@ Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the
 
 For projects that generate docs:
 
-- `snapshotDir(topic)` returns `docs/<subject>/snapshots/<topic>/` from `snapshotTopics`. **An unknown topic is an error**, never a default folder.
-- `archiveOlder(dir, keep)` moves older snapshots to `archive/<subject>/snapshots/<topic>/`. **It refuses any folder that is not a `snapshots/<topic>/` folder** (hazard H1).
-- File names carry the date: `<TOPIC>_<YYYY-MM-DD>.md`.
+**Built in 0.4** as `scripts/lib/snapshots.mjs` and the `docs-kit snapshot` command, so a generator in any language uses it: `docs-kit snapshot path <topic>` prints where today's snapshot goes, and `docs-kit snapshot archive <topic>` archives the older ones. A Python port is not needed.
 
-Node first. A Python port is a later option, only if a trial project needs it.
+- `topicDir(topic)` returns `docs/<subject>/snapshots/<topic>/` from `snapshotTopics`. **An unknown topic is an error**, never a default folder.
+- `archiveOlder(dir, keep)` moves older snapshots to `archive/<subject>/snapshots/<topic>/`. **It refuses any folder that is not a `snapshots/<topic>/` folder** (hazard H1).
+- File names carry the date: `<TOPIC>_<YYYY-MM-DD>.<ext>`.
+- **Gitignored topics.** A generator may keep its snapshots out of git, made on demand. When git ignores a topic's folder, `check` reports the topic as local-only instead of failing H10, and `archive` fails loudly (exit 1) when it moves an ignored file to a place git does not ignore (H4).
+
+Node only. Trial 2's generator is Python; it calls the command instead of a port.
 
 ### 6.7 Setup — `docs-kit init` and `/docs-kit-init`
 
@@ -251,8 +254,8 @@ Each hazard below happened, or nearly happened, during a real reorganisation: H1
 
 ## 8. Distribution
 
-- **Plugin:** the skills (`/docs-kit-init`, `/docs-kit-pin` and `/docs-kit-help`, then `/docs-kit-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
-- **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
+- **Plugin:** the skills (`/docs-kit-init`, `/docs-kit-reorg`, `/docs-kit-pin` and `/docs-kit-help`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
+- **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `audit`, `index`, `move`, `print` and `snapshot` (`lib/snapshots.mjs`). Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
 - **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version. Release tags never move (a tag ruleset blocks it).
 - **License:** Apache License 2.0 with a `NOTICE`, from 0.3.1. Earlier releases stay MIT.
 - **The kit standard:** docs-kit follows the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md). Tests enforce its plugin rules (skill prefix, `allowed-tools`, help skill, license) and its documentation rules for docs-kit's own docs (the layout, the commands they show, the version they pin, their links).
