@@ -19,14 +19,16 @@ export function frontMatter(text) {
     listKey = null;
     const kv = /^([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$/.exec(line);
     if (!kv) continue;
-    const [, key, value] = kv;
+    const [, key, raw] = kv;
+    // A trailing "# comment" is not part of the value (not inside quotes).
+    const value = raw.startsWith('#') ? '' : /^["']/.test(raw) ? raw.replace(/^((["']).*?\2)\s+#.*$/, '$1') : raw.replace(/\s+#.*$/, '');
     if (value === '') {
       out[key] = [];
       listKey = key;
     } else if (/^\[.*\]$/.test(value)) {
       out[key] = value.slice(1, -1).split(',').map(unquote).filter(Boolean);
     } else {
-      out[key] = unquote(value.replace(/\s+#.*$/, ''));
+      out[key] = unquote(value);
     }
   }
   return out;
