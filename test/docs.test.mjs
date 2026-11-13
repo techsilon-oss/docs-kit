@@ -112,3 +112,26 @@ test('every relative link in the docs resolves, and so does every anchor', () =>
   }
   assert.deepEqual(broken, []);
 });
+
+test('the generator snippets in the how-to run, in Python and in Node', async (t) => {
+  const { cpSync, writeFileSync: write } = await import('node:fs');
+  const body = read('docs/guides/howto/HOWTO-route-generated-docs.md');
+  const block = (lang) => new RegExp('```' + lang + '\n([\\s\\S]*?)```').exec(body)[1].replace(/^ {3}/gm, '');
+  const root = makeFixture();
+  try {
+    cpSync(join(ROOT, 'scripts'), join(root, 'node_modules/docs-kit/scripts'), { recursive: true });
+    const want = /^docs\/platform\/snapshots\/architecture\/ARCHITECTURE_\d{4}-\d{2}-\d{2}\.pdf$/;
+
+    write(join(root, 'gen.mjs'), `${block('js')}\nconsole.log(snapshotPath('architecture', 'pdf'));\n`);
+    const node = spawnSync(process.execPath, ['gen.mjs'], { cwd: root, encoding: 'utf8' });
+    assert.equal(node.status, 0, node.stderr);
+    assert.match(node.stdout.trim(), want);
+
+    const py = ['python3', 'python'].find((p) => spawnSync(p, ['--version']).status === 0);
+    if (!py) { t.diagnostic('no Python on this machine: the Python snippet was not run'); return; }
+    write(join(root, 'gen.py'), `${block('python')}\nprint(snapshot_path("architecture", "pdf"))\n`);
+    const r = spawnSync(py, ['gen.py'], { cwd: root, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout.trim(), want);
+  } finally { cleanup(root); }
+});

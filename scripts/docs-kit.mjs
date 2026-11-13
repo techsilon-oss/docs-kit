@@ -12,9 +12,11 @@ import { InitError, formatInit, nextSteps, runInit } from './lib/init.mjs';
 import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
 import { PrintError, findPandoc, formatPrint, print } from './lib/print.mjs';
+import { audit, formatAudit } from './lib/audit.mjs';
+import { SnapshotError, archiveOlder, formatArchive, snapshotPath, topicDir } from './lib/snapshots.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.3.1';
+export const VERSION = '0.4.0';
 
 const USAGE = `docs-kit ${VERSION}
 
@@ -22,8 +24,13 @@ Usage:
   docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>] [--no-package]
                                                  set up this repo: docs-kit.json and more
   docs-kit check [--json] [--today YYYY-MM-DD]
+  docs-kit audit [--json]                        read-only inventory before a reorganisation
   docs-kit move <old> <new> [<old> <new> ...] [--dry-run]
   docs-kit index                                 write "How-tos by role" in docs/README.md
+  docs-kit snapshot path <topic> [--date YYYY-MM-DD] [--ext md]
+                                                 where a generator writes today's snapshot
+  docs-kit snapshot archive <topic> [--keep N] [--dry-run]
+                                                 move older snapshots to the archive
   docs-kit print <file.md> [--version X.Y] [--today YYYY-MM-DD]
                                                  .docx and .pdf print copies beside the source (pandoc)
   docs-kit --version | --help
@@ -143,6 +150,41 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
       return 0;
     }
 
+    if (cmd === 'audit') {
+      const json = takeFlag(args, '--json');
+      if (args.length) throw new UsageError(`unexpected argument "${args[0]}"`);
+      if (!repoRootOf(cwd)) throw new UsageError('audit must run inside a git repository');
+      const loaded = loadConfig(root);
+      const cfg = loaded ? { ...loaded, configured: true } : { ...DEFAULTS, configured: false };
+      const report = audit(root, cfg);
+      out(json ? JSON.stringify(report, null, 2) : formatAudit(report));
+      return 0;
+    }
+
+    if (cmd === 'snapshot') {
+      const sub = args.shift();
+      if (!['path', 'archive'].includes(sub)) throw new UsageError('snapshot needs "path" or "archive"');
+      const cfg = loadConfig(root);
+      if (!cfg) throw new ConfigError(`${CONFIG_FILE} not found at the repo root (${root}); snapshot topics are configured there`);
+      if (sub === 'path') {
+        const date = takeValue(args, '--date');
+        const ext = takeValue(args, '--ext');
+        if (args.length !== 1) throw new UsageError('snapshot path needs one <topic>');
+        const day = date ?? new Date().toISOString().slice(0, 10);
+        if (date !== undefined && parseDate(date) === null) throw new UsageError(`--date: "${date}" is not a YYYY-MM-DD date`);
+        out(snapshotPath(cfg, args[0], { date: day, ext: ext ?? 'md' }));
+        return 0;
+      }
+      const keepArg = takeValue(args, '--keep');
+      const dryRun = takeFlag(args, '--dry-run');
+      if (args.length !== 1) throw new UsageError('snapshot archive needs one <topic>');
+      if (!repoRootOf(cwd)) throw new UsageError('snapshot archive must run inside a git repository');
+      const keep = keepArg === undefined ? 1 : Number(keepArg);
+      const report = archiveOlder(root, cfg, topicDir(cfg, args[0]), { keep, dryRun });
+      out(formatArchive(report));
+      return report.newlyVisible.length ? 1 : 0;
+    }
+
     if (cmd === 'print') {
       const version = takeValue(args, '--version');
       const todayArg = takeValue(args, '--today');
@@ -174,6 +216,10 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
     if (e instanceof InitError) {
       err(`docs-kit init: ${e.message}${e.partial ? '' : '\nNothing was written.'}`);
+      return 2;
+    }
+    if (e instanceof SnapshotError) {
+      err(`docs-kit snapshot: ${e.message}\nNothing was moved.`);
       return 2;
     }
     if (e instanceof PrintError) {

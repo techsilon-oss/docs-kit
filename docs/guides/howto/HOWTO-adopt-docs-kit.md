@@ -30,13 +30,13 @@ Use the terminal you normally use for git, in the root folder of your repo.
 1. See what `init` would write. It writes nothing:
 
    ```sh
-   npx github:techsilon-oss/docs-kit#v0.3.1 init --dry-run
+   npx github:techsilon-oss/docs-kit#v0.4.0 init --dry-run
    ```
 
 2. Set it up:
 
    ```sh
-   npx github:techsilon-oss/docs-kit#v0.3.1 init
+   npx github:techsilon-oss/docs-kit#v0.4.0 init
    ```
 
 3. If your repo has a `package.json`, fetch the devDependency that `init` added:
@@ -49,7 +49,7 @@ Use the terminal you normally use for git, in the root folder of your repo.
 5. Add to `docs-kit.json` what only you know: other `protected` paths (a doc path that a database, a URL or code uses as a key), each with its reason.
 6. Commit the files `init` listed.
 
-If your repo must not get a new dependency, add `--no-package` in step 2. Then run the check with `npx github:techsilon-oss/docs-kit#v0.3.1 check`.
+If your repo must not get a new dependency, add `--no-package` in step 2. Then run the check with `npx github:techsilon-oss/docs-kit#v0.4.0 check`.
 
 ## Check
 
