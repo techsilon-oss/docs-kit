@@ -58,6 +58,24 @@ test('H3: an immutable file that names the moved path is left byte for byte', wi
   assert.throws(() => move(root, [['db/migrations/001_seed.sql', 'db/001_seed.sql']], { cfg }), /immutable/);
 }));
 
+test('H11: the proposal that records a move is left as written once it is immutable', withFixture({}, (root, cfg) => {
+  const note = 'docs/notes/2026-01-01-reorganisation.md';
+  const table = '| Old | New |\n|---|---|\n| `docs/legal/TERMS.md` | `docs/legal/TERMS-OF-USE.md` |\n';
+  writeFileSync(join(root, note), `# Proposal\n\n${table}`);
+  git(root, 'add', note);
+  git(root, 'commit', '-q', '-m', 'proposal');
+  const pair = [['docs/legal/TERMS.md', 'docs/legal/TERMS-OF-USE.md']];
+  // The hazard: without the guard, the dry run rewrites the record's "old" column.
+  const unguarded = move(root, pair, { cfg, dryRun: true });
+  assert.ok(unguarded.rewritten.includes(note), 'the hazard reproduces');
+  // The guard: the proposal note goes in immutablePrefixes when it is written (L10).
+  const guarded = { ...cfg, immutablePrefixes: [...cfg.immutablePrefixes, note] };
+  const before = read(root, note);
+  const r = move(root, pair, { cfg: guarded });
+  assert.equal(read(root, note), before, 'the record still shows the old path');
+  assert.ok(r.immutableHits.includes(note));
+}));
+
 test('H4: gitignore rules follow the move, so confidential files stay ignored', withFixture({}, (root, cfg) => {
   const r = move(root, [['docs/legal', 'docs/money/legal']], { cfg: { ...cfg, subjects: [...cfg.subjects, 'money'] } });
   const gi = read(root, '.gitignore');

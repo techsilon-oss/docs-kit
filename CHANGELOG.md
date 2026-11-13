@@ -2,6 +2,13 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- DESIGN §6.3: the least-change defaults (L1 to L10) a reorganisation applies without asking, so the owner answers `roles` and approves the proposal once.
+- Hazard H11: `move` rewrites the proposal note that records the move. Guard: the note goes in `immutablePrefixes` when it is written (L10); a test reproduces the hazard.
+
 ## [0.2.1] - 2026-11-12
 
 ### Added

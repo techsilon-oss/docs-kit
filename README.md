@@ -133,7 +133,7 @@ Limits:
 
 ## Hazards
 
-The tools guard against ten hazards found in a real reorganisation ([DESIGN §7](docs/DESIGN.md#7-hazards-found-in-a-real-reorganisation)). Each guard has a test in [test/hazards.test.mjs](test/hazards.test.mjs) that reproduces the hazard on a fixture repo.
+The tools guard against the hazards found in real reorganisations ([DESIGN §7](docs/DESIGN.md#7-hazards-found-in-a-real-reorganisation)). Each guard has a test in [test/hazards.test.mjs](test/hazards.test.mjs) that reproduces the hazard on a fixture repo.
 
 ## Develop
 

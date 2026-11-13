@@ -151,7 +151,7 @@ For a repo that does not follow the rule. Never moves anything before the owner 
 2. **Proposal:** the subject list, the old → new table, the protected paths with reasons, the hazards found, and the slices. Written as a pin (`docs/notes/`) so it survives the session. It applies the least-change defaults below and lists each one it applied, so the owner can override any of them.
 3. **Owner approves** the whole proposal once. The only question asked before that is the `roles` list, when the repo will have how-tos. Each slice's pull request is then merged by the owner as usual; a slice raises a new question only when the check, the tests or `move` show something the proposal did not foresee.
 
-**Least-change defaults.** *Decided (2026-11-13).* A reorganisation applies these without asking. Each one is either the smallest change that satisfies the layout rule, or adds safety, so neither needs a judgement call. The owner can override any of them in the proposal. The project's own agent instructions win where they say otherwise.
+**Least-change defaults.** *Decided (2026-11-13; L10 added the same day from Trial 1).* A reorganisation applies these without asking. Each one is either the smallest change that satisfies the layout rule, or adds safety, so neither needs a judgement call. The owner can override any of them in the proposal. The project's own agent instructions win where they say otherwise.
 
 | # | Default | Why no question is needed |
 |---|---|---|
@@ -164,6 +164,7 @@ For a repo that does not follow the rule. Never moves anything before the owner 
 | L7 | Root files another tool's manifest names stay at the root (`rootAllowed`). | That tool reads them there |
 | L8 | Slices: the subject READMEs first (no moves), then the moves, then how-tos. The layout check goes into the tests in the slice where it first passes. | Each slice can be reviewed and reverted on its own, and no slice adds a failing test |
 | L9 | Merging overlapping docs (two guides for the same task) is not part of the reorganisation. The proposal lists them for later. | A merge is a content change; mixed into a move it hides in the diff |
+| L10 | The proposal note goes in `immutablePrefixes` in the same commit that adds it. | It is a record of the old paths; `move` must not rewrite it (H11) |
 
 A question reaches the owner only for what no rule can settle: who the `roles` are, a file that fits no subject and whose new subject is not obvious, and an override of a default.
 4. **Slices:** one pull request per slice (for example: front door and READMEs; one subject per slice; generators last). Each slice: `move --dry-run`, `move`, run the project's tests and `check`, stage everything changed, confirm a clean working tree, open the PR.
@@ -226,7 +227,7 @@ The project's own agent instructions (branch rules, commit style, dependency rul
 
 ## 7. Hazards found in a real reorganisation
 
-Each hazard below happened, or nearly happened, during one reorganisation of a large `docs/` tree. Each has a guard in the tools. The audit step checks for all of them.
+Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 in Trial 1. Each has a guard in the tools. The audit step checks for all of them.
 
 | # | Hazard | What goes wrong | Guard |
 |---|---|---|---|
@@ -240,6 +241,7 @@ Each hazard below happened, or nearly happened, during one reorganisation of a l
 | H8 | A path is followed by a full stop at the end of a sentence | The rewrite pattern skips it | The pattern allows trailing punctuation |
 | H9 | A repo-wide rewrite changes files outside the folders you stage | Changes stay uncommitted across several PRs | The mover prints every changed file and ends with `git status --porcelain` |
 | H10 | A test scanner reads zero files after a move | The check passes vacuously | Every scanning check asserts a non-empty set |
+| H11 | The proposal that records the reorganisation names the old paths | `move` rewrites the record's "old" column, so the record shows every file moving to where it already is | The proposal note goes in `immutablePrefixes` when it is written (L10) |
 
 ## 8. Distribution
 
