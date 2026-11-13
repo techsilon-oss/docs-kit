@@ -4,12 +4,14 @@
 // If this file is vendored into another repo, keep this banner and VERSION,
 // and send fixes back upstream.
 import { realpathSync } from 'node:fs';
+import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_FILE, ConfigError, DEFAULTS, loadConfig } from './lib/config.mjs';
 import { check, formatCheck, listDocFiles, parseDate } from './lib/check.mjs';
 import { InitError, formatInit, nextSteps, runInit } from './lib/init.mjs';
 import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
+import { PrintError, findPandoc, formatPrint, print } from './lib/print.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
 export const VERSION = '0.2.1';
@@ -22,13 +24,15 @@ Usage:
   docs-kit check [--json] [--today YYYY-MM-DD]
   docs-kit move <old> <new> [<old> <new> ...] [--dry-run]
   docs-kit index                                 write "How-tos by role" in docs/README.md
-  docs-kit print <file.md> [--version X.Y]      (arrives in 0.3)
+  docs-kit print <file.md> [--version X.Y] [--today YYYY-MM-DD]
+                                                 .docx and .pdf print copies beside the source (pandoc)
   docs-kit --version | --help
 
 Run from anywhere inside the repo. Configuration: ${CONFIG_FILE} at the repo root.
 
-Exit codes: 0 ok; 1 check failed, or the move made an ignored file visible;
-2 usage or configuration error, or the move was refused (nothing moved).`;
+Exit codes: 0 ok (print: also when pandoc is not installed and printing was
+skipped); 1 check failed, the move made an ignored file visible, or pandoc made
+no copy; 2 usage or configuration error, or the move was refused (nothing moved).`;
 
 function takeFlag(args, name) {
   const i = args.indexOf(name);
@@ -59,7 +63,7 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
       out(USAGE);
       return 0;
     }
-    if (takeFlag(args, '--version')) {
+    if (args[0] === '--version' && args.length === 1) {
       out(VERSION);
       return 0;
     }
@@ -140,8 +144,22 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
 
     if (cmd === 'print') {
-      err('docs-kit print arrives in 0.3 (DESIGN §10). Nothing was printed.');
-      return 2;
+      const version = takeValue(args, '--version');
+      const todayArg = takeValue(args, '--today');
+      const unknown = args.find((a) => a.startsWith('--'));
+      if (unknown) throw new UsageError(`unknown option "${unknown}"`);
+      if (args.length !== 1) throw new UsageError('print needs one <file.md>');
+      let today = new Date();
+      if (todayArg) {
+        const t = parseDate(todayArg);
+        if (t === null) throw new UsageError(`--today: "${todayArg}" is not a YYYY-MM-DD date`);
+        today = new Date(t);
+      }
+      const file = relative(root, resolve(cwd, args[0])).split(sep).join('/');
+      const report = print(root, file, { version, today, pandoc: findPandoc() });
+      out(formatPrint(report));
+      // Skipped (no pandoc) is not an error; pandoc that made nothing is.
+      return report.skipped || report.made.length ? 0 : 1;
     }
 
     throw new UsageError(`unknown command "${cmd}"`);
@@ -156,6 +174,11 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
     }
     if (e instanceof InitError) {
       err(`docs-kit init: ${e.message}${e.partial ? '' : '\nNothing was written.'}`);
+      return 2;
+    }
+    if (e instanceof PrintError) {
+      err(`docs-kit print: ${e.message}
+Nothing was printed.`);
       return 2;
     }
     if (e instanceof MoveError) {
