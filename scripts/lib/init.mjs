@@ -219,6 +219,18 @@ function planPackage(root, version, changes, notes) {
   return true;
 }
 
+/** --no-package: package.json is left alone. Returns whether it already has docs-kit. */
+function skipPackage(root, version, changes, notes) {
+  const file = 'package.json';
+  if (!existsSync(join(root, file))) return false;
+  let pkg = {};
+  try { pkg = JSON.parse(readFileSync(join(root, file), 'utf8')); } catch { /* left alone either way */ }
+  const has = 'docs-kit' in { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+  changes.push({ path: file, action: 'skip', why: 'left alone (--no-package)' });
+  if (!has) notes.push(`${file}: left alone (--no-package); run docs-kit with npx github:${UPSTREAM}#v${version}`);
+  return has;
+}
+
 function renderTest(kind, testFile, cli) {
   const depth = posix.dirname(testFile) === '.' ? 0 : posix.dirname(testFile).split('/').length;
   if (kind === 'vitest') {
@@ -264,7 +276,7 @@ function renderTest(kind, testFile, cli) {
  * Plan the setup. Writes nothing.
  * @returns {{ config, configExists: boolean, changes: {path, action, why, content?}[], notes: string[] }}
  */
-export function planInit(root, { docsRoot, testFile, version } = {}) {
+export function planInit(root, { docsRoot, testFile, version, noPackage = false } = {}) {
   const changes = [];
   const existing = loadConfig(root);
   const D = docsRoot ? normalizeRel(docsRoot) : existing?.docsRoot ?? DEFAULTS.docsRoot;
@@ -290,7 +302,7 @@ export function planInit(root, { docsRoot, testFile, version } = {}) {
   if (existsSync(join(root, front))) changes.push({ path: front, action: 'skip', why: 'exists' });
   else changes.push({ path: front, action: 'create', why: 'the front door', content: renderFrontDoor(config.subjects) });
 
-  const hasDep = planPackage(root, version, changes, notes);
+  const hasDep = noPackage ? skipPackage(root, version, changes, notes) : planPackage(root, version, changes, notes);
 
   if (testFile) {
     const t = normalizeRel(testFile);
@@ -327,8 +339,8 @@ export function applyInit(root, plan, { only = () => true } = {}) {
  * The test file is written only when the check passes: a failing test would
  * block every commit while the docs are being reorganised.
  */
-export function runInit(root, { docsRoot, testFile, version, dryRun = false } = {}) {
-  const plan = planInit(root, { docsRoot, testFile, version });
+export function runInit(root, { docsRoot, testFile, version, noPackage = false, dryRun = false } = {}) {
+  const plan = planInit(root, { docsRoot, testFile, version, noPackage });
   if (!dryRun) applyInit(root, plan, { only: (c) => !c.test });
   const result = check(root, plan.config);
   if (dryRun) {

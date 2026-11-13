@@ -1,61 +1,75 @@
 ---
 name: docs-kit-init
-description: Set up docs-kit in the current repo, then explain what the layout check found and what to do next. Runs `docs-kit init` (a starter docs-kit.json, the front door, a pinned devDependency, a docs:check script, the check as a test), proposes roles and protected paths, and offers the guided reorganisation. Never overwrites, never commits, never moves a doc. Use when a repo adopts docs-kit, or when docs-kit.json is missing.
+description: Set up docs-kit in the current repo in two answers. Asks everything up front (branch, devDependency, test file, protected paths), runs `docs-kit init`, explains what the layout check found, commits the setup on a yes, and offers the guided reorganisation. Never overwrites, never pushes, never moves a doc. Use when a repo adopts docs-kit, or when docs-kit.json is missing.
 argument-hint: "[--docs-root <dir>]"
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" init*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" check*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" --version) Bash(git rev-parse *) Bash(git status *) Bash(git grep *) Bash(git ls-files *) Bash(node --version) Read Glob Grep
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" init*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" check*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" --version) Bash(git rev-parse *) Bash(git status *) Bash(git branch *) Bash(git symbolic-ref *) Bash(git grep *) Bash(git ls-files *) Bash(git diff *) Bash(node --version) Read Glob Grep
 ---
 
 # /docs-kit-init — set up docs-kit in this repo
 
-`docs-kit init` does the setup. This skill runs it, then adds what needs judgement: it explains the findings, proposes the values only the owner knows, and leads into the reorganisation.
+`docs-kit init` does the setup. This skill runs it, and adds what needs judgement. The owner should never need to know what to type next: ask every decision up front in **one** prompt, do the work, then end with **one** question.
 
 The CLI is the plugin's own copy: `node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs"`. Below it is written as `DOCS_KIT`. Run it from the repo root.
 
 **Rules for the whole skill:**
 
-- Never overwrite a file, never commit, never push. The owner reviews and commits.
-- Never move, rename or delete a doc. Moves happen only after the owner approves a reorganisation proposal (step 6).
-- Follow the project's own agent instructions (`CLAUDE.md` or similar): its branch rules, its test commands, its approval rules.
+- Never overwrite a file. Never push. Commit only on the owner's yes in step 6, and only the setup files.
+- Never move, rename or delete a doc. Moves happen only after the owner approves a reorganisation proposal (step 7).
+- Follow the project's own agent instructions (`CLAUDE.md` or similar): its branch rules, commit style, test commands and approval rules. Where they differ from this skill, they win.
 - Do not edit files under `immutablePrefixes` in `docs-kit.json`.
-- Ask before you run `npm install` or any other install.
+- Ask with the question tool when there is one (in Claude Code, AskUserQuestion), with your recommendation first and marked "(Recommended)", so each answer is one choice.
 
-## Step 1 — Preflight
+## Step 1 — Preflight (read-only)
 
 Run each, and report PASS or STOP:
 
 - `git rev-parse --show-toplevel`: must be inside a git repository. If not, STOP and say why: `init` reads what git tracks.
 - `node --version`: must be 22 or later. If not, STOP.
-- `git status --porcelain`: if there are uncommitted changes, say so, and ask whether to continue. Setup changes are easier to review on a clean tree.
-- `DOCS_KIT --version`: report it. This is the version `init` pins in `package.json`.
+- `DOCS_KIT --version`: report it. This is the version `init` pins.
+- `git branch --show-current`, and the default branch (`git symbolic-ref --short refs/remotes/origin/HEAD`, else `main`).
+- `git status --porcelain`: note any uncommitted changes. They are not the setup's; the commit in step 6 leaves them out.
+- Read the project's agent instructions for: branch rules, commit message style, the test command, and rules about new dependencies.
 
 If `docs-kit.json` exists, say so: `init` keeps it and only adds what is missing.
 
-## Step 2 — Show the plan
+## Step 2 — Look before asking (read-only)
 
-Run `DOCS_KIT init --dry-run` (add `--docs-root <dir>` if the user gave one). It writes nothing. Show its output as printed, then say in one or two sentences what it would create or update and why.
+1. Run `DOCS_KIT init --dry-run` (add `--docs-root <dir>` if the user gave one). It writes nothing. Keep its output for the prompt.
+2. **Test file.** `init --test <file>` writes the layout check as a test. Find where tests live:
+   - A `vitest.config.*` or `vite.config.*`: read its `test.include`. The file must match it. With no `include`, vitest finds `*.test.*` anywhere outside `node_modules`.
+   - Tests in a folder (`test/`, `tests/`, `__tests__/`) or beside the code: follow what the repo does.
+   - `pytest.ini`, `pyproject.toml` with `[tool.pytest.ini_options]`, or `conftest.py`: a `.py` file where pytest looks (`testpaths`).
+   - No test runner: propose none, and say that `npm run docs:check` (or the npx command) can run in CI.
 
-## Step 3 — Choose where the test goes
+   Use `.ts` only if the repo's tests are TypeScript. `init` writes the test only once the check passes; while it fails, the path is kept for the last slice of the reorganisation.
+3. **Protected candidates**: doc paths that must never move because something outside the docs uses the path. Use `git grep -n "docs/"` outside the docs root, and look for:
+   - files under `immutablePrefixes` (from the dry run's "Found:" lines) that name a doc, for example a migration that cites a doc as its spec. `move` never edits those files, so moving the doc leaves them stale for good;
+   - doc paths in database seeds, in code that reads a doc at run time (a help page that loads `docs/...`), and in URLs other systems link to.
 
-`init --test <file>` writes the layout check as a test. Where tests live is a project choice, so find it:
+   Give each candidate its reason. A test that names a doc by its full path is **not** a candidate: `move` rewrites it. List it as a hazard for the reorganisation instead.
+4. **Roles** (for later): who reads the how-tos (for example `customer`, `support`, `admin`), from the app's own roles. Short lower-case names; none if the app has one kind of user. Do not ask about them now: `roles` is written only once how-tos exist (with `roles` set and no how-tos, the check fails). They go in the reorganisation proposal.
 
-- A `vitest.config.*` or `vite.config.*`: read its `test.include`. The file must match it. If there is no `include`, vitest finds `*.test.*` anywhere outside `node_modules`.
-- Tests in a folder (`test/`, `tests/`, `__tests__/`) or beside the code: follow what the repo does.
-- `pytest.ini`, `pyproject.toml` with `[tool.pytest.ini_options]`, or `conftest.py`: a `.py` file where pytest looks (`testpaths`).
-- No test runner: propose no test file, and say that `npm run docs:check` (or the npx command) can run in CI.
+## Step 3 — One prompt, every decision
 
-Propose one path, for example `tests/docs-layout.test.mjs`. Use `.ts` only if the repo's tests are TypeScript.
+Show the dry run's plan in a few lines (what it creates or updates, and the "Found:" lines that explain `docs-kit.json`). Then ask, in one prompt, only the questions that apply:
 
-`init` writes the test only when the check passes. While the check fails, it skips the test and says "not yet": a failing test would block every commit during the reorganisation. The test then goes in with the last slice of the reorganisation (step 7).
+1. **Branch.** If the current branch is the default branch, a shared branch named in the project's rules (such as `dev`), or a feature branch for other work, recommend a new branch from here, named by the project's rules or else `docs/adopt-docs-kit`. Uncommitted changes come along and stay out of the setup commit. If the current branch is already for this work, recommend staying.
+2. **Dependency.** Only when the dry run updates `package.json`: "Add `docs-kit` as a devDependency pinned to `v<version>`, and a `docs:check` script? It has no dependencies of its own and never ships with the app." Recommend yes, unless the project's rules say not to add one. The other answer is `--no-package`: `package.json` stays as it is, and the check runs with `npx github:techsilon-oss/docs-kit#v<version> check`.
+3. **Test file.** The path from step 2, or none.
+4. **Protected.** Each candidate with its reason (multi-select), or "none found" without a question.
 
-## Step 4 — Run it, on one yes
+## Step 4 — Do the work
 
-Ask once: "Run `docs-kit init` with the test at `<path>`?" On a yes, run `DOCS_KIT init --test <path>` (no `--test` if the owner chose none). Show the output as printed. If it skipped the test as "not yet", say why in one line, and keep the path for later.
+On the answers, in order:
+
+1. Create the branch if chosen (`git switch -c <name>`).
+2. Run `DOCS_KIT init` with `--test <path>` if a path was chosen and `--no-package` if the dependency was declined. Show the output as printed.
+3. Add the chosen protected paths to `protected` in `docs-kit.json`, each with its reason, then run `DOCS_KIT check`.
+4. If `init` added the devDependency, run the project's install (`npm install`, or the lockfile's tool: `pnpm`, `yarn`, `bun`). The yes in step 3 covers it.
 
 ## Step 5 — Explain the findings
 
-`init` ends with the layout check. A docs folder that does not follow the layout yet fails it: say that this is expected, and that `init` worked.
-
-Group the errors and warnings by kind. For each kind, say in one line what it means and how it gets fixed. Do not fix any of them now.
+`init` ends with the layout check. A docs folder that does not follow the layout yet fails it: say that this is expected, and that `init` worked. Group the errors and warnings by kind, one line each on what it means and how it gets fixed. Do not fix any of them now.
 
 | Finding | Meaning | Fixed by |
 |---|---|---|
@@ -68,31 +82,27 @@ Group the errors and warnings by kind. For each kind, say in one line what it me
 | `how-tos are named HOWTO-<task>.md`, `last_checked` | A how-to's name or its freshness date | Renaming it with `move`, or checking the steps and setting `last_checked` |
 | Role findings (`no roles:`, `How-tos by role`) | Only when `roles` is set | Adding `roles:` to each how-to, then `DOCS_KIT index` |
 
-Then read the "Found:" lines from `init` back to the owner, so they see why each value is in `docs-kit.json`.
+## Step 6 — One question: commit the setup
 
-## Step 6 — Propose what only the owner knows
+List the files the setup changed (from `init`'s output, plus the lockfile if the install ran) and `git diff --stat` of them. Then ask one question:
 
-`init` leaves two keys empty. Propose values from what the repo shows, and write them only after the owner agrees:
+"Commit the setup on `<branch>` as `<message>`?" — the message in the project's commit style, else `chore(docs): adopt docs-kit <version>`. The answers: commit (Recommended), or leave it for the owner to review.
 
-- **`protected`**: doc paths that must never move, because something outside the docs uses the path as a key. Look for doc paths in database seeds and migrations, in code that reads a doc file at run time (for example a help page that loads `docs/...`), and in URLs that other systems link to. Use `git grep -n "docs/"` outside `docs/`. Give each path a reason. If you find none, say so.
-- **`roles`**: who reads the how-tos (for example `customer`, `support`, `admin`). Look at the app's own roles (an access or roles doc, role names in the code, per-role guides). Use short lower-case names. If the app has one kind of user, propose no roles.
+On a yes: if the project's rules say to run tests before a commit, run them first and stop if they fail. Stage only the setup files by name (never `git add -A`: other uncommitted work stays out), commit, and show `git log --oneline -1`. Never push; say how the branch reaches the shared branch under the project's rules (for example, a pull request into `dev`).
 
-Edit only these two keys in `docs-kit.json`, then run `DOCS_KIT check` and show the result.
+The setup is safe to commit while the check fails: `init` adds no failing test, and `docs:check` is a separate script, not part of the tests.
 
-Write `roles` only when how-tos exist (`<subject>/howto/HOWTO-<task>.md`). With `roles` set and no how-tos, the check fails ("no how-tos were found"). Before then, keep the proposed roles for the reorganisation proposal; they go into `docs-kit.json` in the slice that adds the first how-tos, together with `DOCS_KIT index`.
+## Step 7 — One next step
 
-## Step 7 — Next steps
+If the check passed, the setup is done: say so, and stop.
 
-Tell the owner, as a numbered list:
+If it failed, ask one question: "Start the reorganisation with a read-only audit?" (Recommended), or stop here. On a yes, follow DESIGN §6.3 of docs-kit (https://github.com/techsilon-oss/docs-kit/blob/main/docs/DESIGN.md):
 
-1. Run `npm install` if `init` added the devDependency. Ask before you run it.
-2. Review the changes with `git status` and `git diff`, and commit them on the working branch. This skill does not commit. The setup is safe to commit while the check fails: `init` adds no failing test, and `docs:check` is a separate script, not part of the tests.
-3. If the check fails, offer the reorganisation. Do not start it without a yes. It follows DESIGN §6.3 of docs-kit (https://github.com/techsilon-oss/docs-kit/blob/main/docs/DESIGN.md):
-   1. **Audit**, read-only: every file under the docs root, every doc path named outside it, generators, `.gitignore` rules, path-based keys, and paths built in pieces.
-   2. **Proposal**, saved as a dated note in `docs/notes/`: the subject list, an old → new table for every file, protected paths with reasons, roles, the hazards found, and the slices (one pull request each).
-   3. **The owner approves** the subjects, the names and the roles. Nothing moves before that.
-   4. **Each slice:** `DOCS_KIT move <old> <new> --dry-run`, then `move`, then the project's tests and `DOCS_KIT check`. Stage everything `git status` lists, not only the docs folders. Open the pull request.
-   5. **Close:** once the check passes, run `DOCS_KIT init --test <path>` with the path from step 3, so the check runs in the tests. Record the decision in the project's decision log.
+1. **Audit**, read-only: every file under the docs root, every doc path named outside it, generators, `.gitignore` rules, path-based keys, and paths built in pieces.
+2. **Proposal**, saved as a dated note in `docs/notes/`: the subject list, an old → new table for every file, protected paths with reasons, the roles from step 2, the hazards found, and the slices (one pull request each).
+3. **The owner approves** the subjects, the names and the roles. Nothing moves before that.
+4. **Each slice:** `DOCS_KIT move <old> <new> --dry-run`, then `move`, then the project's tests and `DOCS_KIT check`. Stage everything `git status` lists, not only the docs folders. Open the pull request.
+5. **Close:** once the check passes, run `DOCS_KIT init --test <path>` with the path from step 3, so the check runs in the tests; add `roles` and run `DOCS_KIT index` if the how-tos exist. Record the decision in the project's decision log.
 
 ## If something fails
 

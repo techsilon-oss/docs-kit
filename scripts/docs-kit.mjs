@@ -12,12 +12,12 @@ import { repoRootOf } from './lib/git.mjs';
 import { MoveError, formatMove, move } from './lib/move.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 const USAGE = `docs-kit ${VERSION}
 
 Usage:
-  docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]
+  docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>] [--no-package]
                                                  set up this repo: docs-kit.json and more
   docs-kit check [--json] [--today YYYY-MM-DD]
   docs-kit move <old> <new> [<old> <new> ...] [--dry-run]
@@ -70,9 +70,10 @@ export function main(argv, { cwd = process.cwd(), out = console.log, err = conso
       const dryRun = takeFlag(args, '--dry-run');
       const docsRoot = takeValue(args, '--docs-root');
       const testFile = takeValue(args, '--test');
+      const noPackage = takeFlag(args, '--no-package');
       if (args.length) throw new UsageError(`unexpected argument "${args[0]}"`);
       if (!repoRootOf(cwd)) throw new UsageError('init must run inside a git repository');
-      const { plan, result } = runInit(root, { docsRoot, testFile, version: VERSION, dryRun });
+      const { plan, result } = runInit(root, { docsRoot, testFile, version: VERSION, noPackage, dryRun });
       out(formatInit(plan, { dryRun }));
       out('');
       out(formatCheck(result, plan.config.docsRoot));

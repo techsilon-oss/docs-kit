@@ -2,7 +2,7 @@
 
 One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), snapshot routing for generated docs, and print copies.
 
-> **Status:** 0.2.0 released 2026-11-12: the layout rule, `docs-kit.json`, `init` and the `/docs-kit-init` plugin skill (setup), `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
+> **Status:** 0.2.1 released 2026-11-12: the layout rule, `docs-kit.json`, `init` and the `/docs-kit-init` plugin skill (setup), `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
 
 ## Needs
 
@@ -10,13 +10,14 @@ Node 22 or later, and git. No runtime dependencies: the scripts use Node built-i
 
 ## Two ways to set it up
 
-- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It runs `docs-kit init`, explains what the check found, proposes the `roles` and `protected` paths, and offers the guided reorganisation. It never commits and never moves a doc without your yes.
+- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It asks every decision in one prompt (the branch, the devDependency, the test file, the `protected` paths), runs `docs-kit init`, explains what the check found, commits the setup on your yes, and offers the guided reorganisation. It never pushes, and never moves a doc without your yes.
 
   ```sh
-  /plugin install docs-kit --marketplace techsilon-oss/docs-kit
+  /plugin marketplace add techsilon-oss/docs-kit
+  /plugin install docs-kit@docs-kit-marketplace
   ```
 
-  Or from a terminal: `claude plugin marketplace add techsilon-oss/docs-kit`, then `claude plugin install docs-kit`.
+  Or from a terminal: `claude plugin install docs-kit --marketplace techsilon-oss/docs-kit`.
 
 - **Anywhere else: `docs-kit init`**, with Node and nothing else. The steps are below.
 
@@ -39,7 +40,7 @@ Both run the same `init`, so they give the same files.
    npm run docs:check        # or: npx github:techsilon-oss/docs-kit check
    ```
 
-   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.2.0 check`.
+   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.2.1 check`.
 
 3. Move docs and keep every reference working. Try `--dry-run` first:
 
@@ -50,7 +51,7 @@ Both run the same `init`, so they give the same files.
 
 To vendor instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo, keep the banner and `VERSION` in `docs-kit.mjs`, and send fixes back here.
 
-## `docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]`
+## `docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>] [--no-package]`
 
 Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same result.
 
@@ -64,7 +65,7 @@ Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same r
 
 `protected` and `roles` stay empty: only you know them. Add them before you move anything.
 
-It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`. It does so only when the check passes; while it fails, a test would block every commit, so `init` skips it and says to run `init --test` again once the check passes.
+It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`. It does so only when the check passes; while it fails, a test would block every commit, so `init` skips it and says to run `init --test` again once the check passes. `--no-package` leaves `package.json` alone; run the check with `npx` instead.
 
 - It never overwrites a file, never commits, and does not run `npm install`. Running it again changes nothing.
 - `--dry-run` lists what it would do and writes nothing.

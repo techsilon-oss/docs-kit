@@ -182,6 +182,27 @@ test('init --test without package.json runs the pinned release through npx', wit
   assert.ok(py.includes(`"npx", "--yes", "github:techsilon-oss/docs-kit#v${VERSION}", "check"`), py);
 }));
 
+test('init --no-package leaves package.json alone; the test runs the pinned release through npx', withRepo(MESSY, (root) => {
+  const before = read(root, 'package.json');
+  const r = run(root, 'init', '--no-package');
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(read(root, 'package.json'), before, 'package.json unchanged');
+  assert.ok(exists(root, 'docs-kit.json'), 'the rest of the setup is written');
+  assert.match(r.stdout, /skip {5}package\.json {2}\(left alone \(--no-package\)\)/);
+  assert.ok(r.stdout.includes(`run docs-kit with npx github:techsilon-oss/docs-kit#v${VERSION}`), r.stdout);
+  assert.doesNotMatch(r.stdout, /Run npm install/);
+  const t = planInit(root, { version: VERSION, testFile: 'tests/docs.test.mjs', noPackage: true }).changes.find((c) => c.path === 'tests/docs.test.mjs').content;
+  assert.ok(t.includes(`'npx', ['--yes', "github:techsilon-oss/docs-kit#v${VERSION}", 'check']`), t);
+}));
+
+test('init --no-package with docs-kit already a dependency: the test runs that copy', withRepo({
+  'package.json': '{"name": "example-app", "devDependencies": {"docs-kit": "github:techsilon-oss/docs-kit#v0.2.0"}}\n', 'docs/README.md': '# d\n',
+}, (root) => {
+  const plan = planInit(root, { version: VERSION, testFile: 't.test.mjs', noPackage: true });
+  assert.match(plan.changes.find((c) => c.path === 't.test.mjs').content, /node_modules\/docs-kit\/scripts\/docs-kit\.mjs/);
+  assert.ok(!plan.notes.some((n) => n.includes('--no-package')), 'no npx advice when the dependency is there');
+}));
+
 test('init in docs-kit\'s own repo does not add itself as a dependency', withRepo({ 'package.json': '{"name": "docs-kit"}\n', 'docs/README.md': '# d\n' }, (root) => {
   const plan = planInit(root, { version: VERSION });
   assert.ok(!plan.changes.some((c) => c.path === 'package.json' && c.action === 'update'));
