@@ -1,8 +1,8 @@
 # docs-kit
 
-One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), snapshot routing for generated docs, and print copies.
+One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), print copies, and snapshot routing for generated docs.
 
-> **Status:** 0.2.1 released 2026-11-12: the layout rule, `docs-kit.json`, `init` and the `/docs-kit-init` plugin skill (setup), `check`, `index` (how-tos by role) and `move`. `/pin`, `print`, `/docs-reorg` and the snapshot library come in later steps ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
+> **Status:** 0.3.0 released 2026-11-13: the layout rule, `docs-kit.json`, `init` and the `/docs-kit-init` plugin skill (setup), `check`, `index` (how-tos by role), `move`, `print`, and the `/pin` plugin skill. `/docs-reorg` and the snapshot library come in a later step ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
 
 ## Needs
 
@@ -10,7 +10,9 @@ Node 22 or later, and git. No runtime dependencies: the scripts use Node built-i
 
 ## Two ways to set it up
 
-- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It asks every decision in one prompt (the branch, the devDependency, the test file, the `protected` paths), runs `docs-kit init`, explains what the check found, commits the setup on your yes, and offers the guided reorganisation. It never pushes, and never moves a doc without your yes.
+- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It applies the least-change defaults (the branch, the devDependency, the test file, the `protected` and frozen paths) and shows them in one prompt to approve or change, runs `docs-kit init`, explains what the check found, commits the setup on your yes, and offers the guided reorganisation. It never pushes, and never moves a doc without your yes.
+
+  The plugin also has **`/pin`**: save a discussion as a dated note in `docs/notes/`, or steps as a how-to in `docs/<subject>/howto/`, with print copies if you ask (DESIGN §6.4).
 
   ```sh
   /plugin marketplace add techsilon-oss/docs-kit
@@ -40,7 +42,7 @@ Both run the same `init`, so they give the same files.
    npm run docs:check        # or: npx github:techsilon-oss/docs-kit check
    ```
 
-   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.2.1 check`.
+   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.3.0 check`.
 
 3. Move docs and keep every reference working. Try `--dry-run` first:
 
@@ -61,9 +63,10 @@ Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same r
 | Docs-root files another tool's manifest names (for example the hub and roadmap in `govkit.json`) | `rootAllowed`, so that tool keeps working |
 | `scripts/source-doc-map.json`, when it lists doc paths | `docMaps` |
 | Migration folders (`supabase/migrations/`, `db/migrations/`, ...) and files another tool vendors with a checksum (`govkit.json` `files`) | `immutablePrefixes`, so `move` never edits them |
+| Docs that those immutable files name by path (a migration that cites a doc as its spec) | `protected`, with the files that name them: moving the doc would leave them stale for good |
 | `<subject>/snapshots/<topic>/` folders | `snapshotTopics` |
 
-`protected` and `roles` stay empty: only you know them. Add them before you move anything.
+`roles` stays empty, and so does any other `protected` path (a doc path a database, a URL or code uses as a key): only you know them. Add them before you move anything.
 
 It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`. It does so only when the check passes; while it fails, a test would block every commit, so `init` skips it and says to run `init --test` again once the check passes. `--no-package` leaves `package.json` alone; run the check with `npx` instead.
 
@@ -118,6 +121,7 @@ For each pair, a file or a folder:
 - refuses to move a `protected` path, a path inside one, or a folder holding one, with the reason, and moves nothing;
 - in `archive/`, changes only links that point into a moved path;
 - lists every line that may build a moved path in pieces (`join(root, "docs", "old")`) for you to fix by hand;
+- when a move renames a file: rewrites a link label that is exactly the old name or path (`[OLD.md](OLD.md)`), and lists every other line that names the old file name alone, with no path, for you to fix by hand;
 - checks that every ignored file it moved is still ignored, and fails loudly if not;
 - prints every file it changed, ends with `git status --porcelain`, then runs `docs-kit check` when `docs-kit.json` exists.
 
@@ -130,6 +134,15 @@ Limits:
 - git finds renames by similarity. A small file whose links change a lot can show as a delete and an add, and `git log --follow` then loses it. Commit large moves before other edits.
 - Paths in other docs folders (`packages/web/docs/...`) and Windows-style `docs\old` paths are not rewritten.
 - A move cannot chain (`a -> b` and `b -> c` in one call). Run it twice.
+
+## `docs-kit print <file.md> [--version X.Y] [--today YYYY-MM-DD]`
+
+Makes `.docx` and `.pdf` print copies beside the source, named `<NAME>_v<X.Y>_<YYYY-MM-DD>`, and removes the older print copies of the same doc, so only the newest stays (DESIGN §6.5). It uses [pandoc](https://pandoc.org/installing.html), or the one `DOCS_KIT_PANDOC` names.
+
+- The version is `--version`, else one minor up from the newest print copy, else `1.0`.
+- A `.pdf` needs a PDF engine for pandoc (for example a LaTeX install). A format that fails keeps its older copy and says why.
+- It warns about tables with more than five columns, which may run off the page.
+- Without pandoc, it skips printing with a message and exits 0. Exit 1 when pandoc ran and made no copy, 2 for wrong arguments.
 
 ## Hazards
 

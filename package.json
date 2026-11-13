@@ -1,6 +1,6 @@
 {
   "name": "docs-kit",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "One layout for docs/, and the tools to keep it: a layout check and a doc mover that keeps every link and path working.",
   "license": "MIT",
   "author": "TechSilon LLC",

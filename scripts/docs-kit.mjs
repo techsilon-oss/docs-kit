@@ -14,7 +14,7 @@ import { MoveError, formatMove, move } from './lib/move.mjs';
 import { PrintError, findPandoc, formatPrint, print } from './lib/print.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.2.1';
+export const VERSION = '0.3.0';
 
 const USAGE = `docs-kit ${VERSION}
 
