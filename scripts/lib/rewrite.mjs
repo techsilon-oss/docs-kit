@@ -118,8 +118,10 @@ export function rewriteMarkdown(text, oldFile, newFile, pathMap, { linksOnly = f
       continue;
     }
     if (f) { fence = f[1]; out.push(line); continue; }
-    let l = line.replace(INLINE_LINK, (m, label, sp, dest, rest) =>
-      `${label}(${sp}${hold(rewriteDest(dest, oldFile, newFile, pathMap, opts))}${rest})`);
+    let l = line.replace(INLINE_LINK, (m, label, sp, dest, rest) => {
+      const next = rewriteDest(dest, oldFile, newFile, pathMap, opts);
+      return `${renamedLabel(label, dest, next, oldFile, pathMap)}(${sp}${hold(next)}${rest})`;
+    });
     l = l.replace(REF_DEF, (m, head, dest) => head + hold(rewriteDest(dest, oldFile, newFile, pathMap, opts)));
     l = l.replace(HTML_ATTR, (m, attr, q, dest) => `${attr}${q}${hold(rewriteDest(dest, oldFile, newFile, pathMap, opts))}${q}`);
     out.push(l);
@@ -127,6 +129,48 @@ export function rewriteMarkdown(text, oldFile, newFile, pathMap, { linksOnly = f
   let joined = out.join('');
   if (!linksOnly) joined = replaceRootPaths(joined, pathMap, rootRe);
   return joined.replace(/\u0000(\d+)\u0000/g, (m, i) => slots[+i]);
+}
+
+/**
+ * A link label that shows the target's old name, when the move renames the
+ * target (hazard H12): [OLD.md](OLD.md) becomes [NEW.md](NEW.md). Only a label
+ * that is exactly the old file name, the old destination or the old repo path
+ * (optionally in backticks) changes; any other label is left as written.
+ */
+export function renamedLabel(label, dest, nextDest, oldFile, pathMap) {
+  if (nextDest === dest) return label;
+  const raw = dest.replace(/^<|>$/g, '').replace(/[?#].*$/, '');
+  let decoded = raw;
+  try { decoded = decodeURI(raw); } catch { /* keep as written */ }
+  const resolved = posix.normalize(posix.join(posix.dirname(oldFile), decoded));
+  const target = pathMap.map(resolved);
+  if (posix.basename(target) === posix.basename(resolved)) return label;
+  const img = label.startsWith('!') ? '!' : '';
+  const inner = label.slice(img.length + 1, -1);
+  const tick = /^`[^`]+`$/.test(inner) ? '`' : '';
+  const text = tick ? inner.slice(1, -1) : inner;
+  const nextRaw = nextDest.replace(/^<|>$/g, '').replace(/[?#].*$/, '');
+  const swap = { [posix.basename(resolved)]: posix.basename(target), [raw]: nextRaw, [decoded]: nextRaw, [resolved]: target };
+  if (!(text in swap)) return label;
+  return `${img}[${tick}${swap[text]}${tick}]`;
+}
+
+/*
+ * Old file names written alone (hazard H12): after a rename, a mention of the
+ * old file name with no path is neither a link nor a repo-root path, so the
+ * rewrite cannot see it. These are reported for review, never rewritten:
+ * a bare name in prose may mean something else.
+ */
+export function findOldNames(text, names) {
+  const hits = [];
+  if (!names.length) return hits;
+  const re = new RegExp(`(?<![${PATH_CHAR}/])(${names.map(escapeRe).join('|')})(?![A-Za-z0-9_-])`, 'g');
+  const lines = text.split(/\r?\n/);
+  for (let n = 0; n < lines.length; n++) {
+    const found = [...new Set([...lines[n].matchAll(re)].map((m) => m[1]))];
+    if (found.length) hits.push({ line: n + 1, text: lines[n].trim(), names: found.sort() });
+  }
+  return hits;
 }
 
 /*

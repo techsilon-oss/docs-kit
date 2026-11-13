@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync
 import { join, posix } from 'node:path';
 import { DEFAULTS, normalizeRel } from './config.mjs';
 import { checkIgnored, gitMv, ignoredFiles, statusPorcelain, trackedFiles, untrackedFiles } from './git.mjs';
-import { PathMap, findPiecedPaths, rewriteMarkdown, replaceRootPaths, rootPathRegex } from './rewrite.mjs';
+import { PathMap, findOldNames, findPiecedPaths, rewriteMarkdown, replaceRootPaths, rootPathRegex } from './rewrite.mjs';
 
 export class MoveError extends Error {}
 
@@ -104,6 +104,10 @@ export function planRewrites(root, plan, cfg = DEFAULTS) {
   const rewrites = []; // { oldPath, newPath, content }
   const immutableHits = [];
   const piecedHits = [];
+  const nameHits = [];
+  // H12: the old names of files whose name changes, not only their folder.
+  const oldNames = [...new Set(plan.filePairs.filter((p) => posix.basename(p.from) !== posix.basename(p.to)).map((p) => posix.basename(p.from)))];
+  const scanNames = (file, text) => { for (const h of findOldNames(text, oldNames)) nameHits.push({ file, ...h }); };
 
   for (const file of trackedFiles(root)) {
     const text = readText(root, file);
@@ -117,6 +121,7 @@ export function planRewrites(root, plan, cfg = DEFAULTS) {
         rootRe.lastIndex = 0;
         if (rootRe.test(text)) immutableHits.push(file);
       }
+      scanNames(newPath, text);
       continue;
     }
 
@@ -130,8 +135,9 @@ export function planRewrites(root, plan, cfg = DEFAULTS) {
       next = replaceRootPaths(text, pathMap, rootRe);
     }
     if (next !== text) rewrites.push({ oldPath: file, newPath, content: next });
+    scanNames(newPath, next);
   }
-  return { rewrites, immutableHits, piecedHits };
+  return { rewrites, immutableHits, piecedHits, nameHits };
 }
 
 function removeEmptyDirs(root, dir, stopAt, warnings) {
@@ -156,13 +162,14 @@ function removeEmptyDirs(root, dir, stopAt, warnings) {
  */
 export function move(root, pairs, { cfg = DEFAULTS, dryRun = false } = {}) {
   const plan = planMoves(root, pairs, cfg);
-  const { rewrites, immutableHits, piecedHits } = planRewrites(root, plan, cfg);
+  const { rewrites, immutableHits, piecedHits, nameHits } = planRewrites(root, plan, cfg);
   const report = {
     dryRun,
     moves: plan.filePairs,
     rewritten: rewrites.map((r) => r.newPath),
     immutableHits,
     piecedHits,
+    nameHits,
     ignoredMoves: plan.ignoredMoves,
     newlyVisible: [],
     warnings: [],
@@ -209,6 +216,10 @@ export function formatMove(r) {
   if (r.piecedHits.length) {
     lines.push(`REVIEW: ${r.piecedHits.length} line(s) may build a moved path in pieces; not rewritten, fix by hand:`);
     for (const h of r.piecedHits) lines.push(`  ${h.file}:${h.line}: ${h.text}   [${h.paths.join(', ')}]`);
+  }
+  if (r.nameHits.length) {
+    lines.push(`REVIEW: ${r.nameHits.length} line(s) name a renamed file by its old name alone; not rewritten, fix by hand:`);
+    for (const h of r.nameHits) lines.push(`  ${h.file}:${h.line}: ${h.text}   [${h.names.join(', ')}]`);
   }
   for (const w of r.warnings) lines.push(`WARNING ${w}`);
   if (r.newlyVisible.length) {
