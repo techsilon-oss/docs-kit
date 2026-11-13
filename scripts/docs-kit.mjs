@@ -16,7 +16,7 @@ import { audit, formatAudit } from './lib/audit.mjs';
 import { SnapshotError, archiveOlder, formatArchive, snapshotPath, topicDir } from './lib/snapshots.mjs';
 import { writeIndex } from './lib/roles.mjs';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 
 const USAGE = `docs-kit ${VERSION}
 

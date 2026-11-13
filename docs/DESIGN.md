@@ -143,6 +143,7 @@ For each pair (file or folder):
 7. **Prints every file it changed,** and ends with `git status --porcelain`. The caller must stage all of them (hazard H9).
 8. Runs `docs-kit check` at the end.
 9. **Follows a renamed file by name** (hazard H12). When a move changes a file's name, not only its folder: a link label that is exactly the old file name, the old destination or the old repo path becomes the new one (`[OLD.md](OLD.md)` becomes `[NEW.md](NEW.md)`); every other line in a tracked text file that names the old file name alone, with no path, is listed for review and not rewritten, because a bare name in prose may mean something else.
+10. **Lists links that spell out a full address** (hazard H13): a link to a moved doc by URL, such as a GitHub link to the repo's own file, or by `file:///`. It does not rewrite them, because it cannot tell this repo from another repo or machine.
 
 ### 6.3 Guided reorganisation — `/docs-kit-reorg` (skill)
 
@@ -235,7 +236,7 @@ The project's own agent instructions (branch rules, commit style, dependency rul
 
 ## 7. Hazards found in a real reorganisation
 
-Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 and H12 in Trial 1. Each has a guard in the tools. The audit step checks for all of them.
+Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 and H12 in Trial 1, H13 in Trial 2. Each has a guard in the tools. The audit step checks for all of them.
 
 | # | Hazard | What goes wrong | Guard |
 |---|---|---|---|
@@ -251,6 +252,7 @@ Each hazard below happened, or nearly happened, during a real reorganisation: H1
 | H10 | A test scanner reads zero files after a move | The check passes vacuously | Every scanning check asserts a non-empty set |
 | H11 | The proposal that records the reorganisation names the old paths | `move` rewrites the record's "old" column, so the record shows every file moving to where it already is | The proposal note goes in `immutablePrefixes` when it is written (L10) |
 | H12 | A renamed file is named in a link label, or by its file name alone with no path | The link target follows the move, but the label still shows the old name, and the bare name is neither rewritten nor reported | `move` rewrites a label that is exactly the old name or path, and lists every other bare mention for review (§6.2 step 9) |
+| H13 | A link names a moved doc by its full address: a URL to the repo's own file, or `file:///` | The link is not rewritten and not reported, so it breaks once the move reaches the branch the URL names | `move` lists every such link for review (§6.2 step 10) |
 
 ## 8. Distribution
 
@@ -295,6 +297,16 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 - Too many judgement calls reached the owner: hence the least-change defaults (§6.3) and setup in two answers (§6.7, 0.2.1).
 - `move` rewrote the proposal that recorded the move: H11, guarded by L10.
 - When a move **renames** a file, two references go stale that `move` neither rewrites nor reports: a link label that shows the old file name (`[OLD.md](OLD.md)`: the target is rewritten, the label is not), and the old file name written alone, with no path. **Planned for 0.3:** `move` rewrites a link label that is exactly the old file name or path, and lists every other line in a tracked text file that names the old file name, for review. A move that keeps the name (L2) has neither problem.
+
+**Trial 2 result (2026-11-13).** Adopted with `/docs-kit-reorg` in five slices: setup, folder maps and proposal, generator to snapshots, the moves, roles and how-tos. The owner answered the roles and approved the proposal once, plus one choice no default settled (below). The generator, in Python, now asks `docs-kit snapshot path` where to write and calls `docs-kit snapshot archive`; its outputs stay gitignored, and the check reports the topic as local-only. 13 docs moved as renames, with links rewritten across 71 files; the check passes and runs in the tests. What it taught (fixed in 0.4.1 unless marked):
+
+- The exports error read as "the folder is missing". It now says an `exports/` folder is not allowed.
+- A protected doc at the docs root could never pass the check, because it may not move. `init` now adds it to `rootAllowed`. The skill keeps folders that hold a protected doc, and never lists `archive` as a subject.
+- The proposal mixed "cannot move" (protected) with "kept by choice" (a default), so the owner had to choose between them. The skill now gives each kept doc one of the two reasons.
+- `docs-kit.json` has comments, and a linter that reads JSON strictly (Biome) rejected it. `init` now warns and names the fix.
+- Links that spell out a full address (a GitHub URL to the repo's own file, `file:///`) were neither rewritten nor reported: H13, now reported.
+- A move rewrites doc paths in code comments, so a doc-sync gate that maps code to docs reports them as code changes on the release pull request. The skill now tells the owner. **Not fixed here:** the lasting fix is in that gate (govkit), which can ignore a file whose only change is a doc path renamed in the same diff.
+- The generator slice went before the moves, and the largest move last, so each problem showed on its own. The skill now orders the slices that way.
 
 **Decided (2026-11-13):** the least-change defaults (§6.3, L1 to L9). In Trial 1 the owner was asked a dozen judgement calls (branch, dependency, test path, what to protect, folder and file renames, historical docs, new subjects, which docs become how-tos). Almost all had one safe answer. Defaults now settle those, so the owner answers `roles` and approves the proposal once. With that, 0.3's `protected` suggestions are written by `init` rather than only suggested, because protecting only adds safety.
 
