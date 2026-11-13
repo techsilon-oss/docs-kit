@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. Later steps are not built yet.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -142,31 +142,53 @@ For each pair (file or folder):
 6. **Searches for the path built in pieces** (`join("docs", "old")`, quoted segments `"old"`) and prints every hit for review. It does not rewrite them (hazard H7).
 7. **Prints every file it changed,** and ends with `git status --porcelain`. The caller must stage all of them (hazard H9).
 8. Runs `docs-kit check` at the end.
+9. **Follows a renamed file by name** (hazard H12). When a move changes a file's name, not only its folder: a link label that is exactly the old file name, the old destination or the old repo path becomes the new one (`[OLD.md](OLD.md)` becomes `[NEW.md](NEW.md)`); every other line in a tracked text file that names the old file name alone, with no path, is listed for review and not rewritten, because a bare name in prose may mean something else.
 
 ### 6.3 Guided reorganisation — `/docs-reorg` (skill)
 
 For a repo that does not follow the rule. Never moves anything before the owner approves the proposal.
 
 1. **Audit** (read-only): inventory every file under `docs/` and every doc path referenced outside it; group by likely subject; find generators, gitignore rules, path-based keys and pieced-together paths (the hazard list is the checklist).
-2. **Proposal:** the subject list, the old → new table, the protected paths with reasons, the hazards found, and the slices. Written as a pin (`docs/notes/`) so it survives the session.
-3. **Owner approves** the subject list and the naming.
+2. **Proposal:** the subject list, the old → new table, the protected paths with reasons, the hazards found, and the slices. Written as a pin (`docs/notes/`) so it survives the session. It applies the least-change defaults below and lists each one it applied, so the owner can override any of them.
+3. **Owner approves** the whole proposal once. The only question asked before that is the `roles` list, when the repo will have how-tos. Each slice's pull request is then merged by the owner as usual; a slice raises a new question only when the check, the tests or `move` show something the proposal did not foresee.
 4. **Slices:** one pull request per slice (for example: front door and READMEs; one subject per slice; generators last). Each slice: `move --dry-run`, `move`, run the project's tests and `check`, stage everything changed, confirm a clean working tree, open the PR.
 5. **Close:** write `docs-kit.json`, add the layout check to the project's tests or CI, record the decision in the project's decision log.
 
+**Least-change defaults.** *Decided (2026-11-13; L10 added the same day from Trial 1).* A reorganisation applies these without asking. Each one is either the smallest change that satisfies the layout rule, or adds safety, so neither needs a judgement call. The owner can override any of them in the proposal. The project's own agent instructions win where they say otherwise.
+
+| # | Default | Why no question is needed |
+|---|---|---|
+| L1 | Keep every existing subject folder and its name. Add a subject only for files that fit none of them. | A rename rewrites every link into the folder, for no gain in following the rule |
+| L2 | A move changes the folder, never the file name. | File names are what people, prose and tests search for; a rename breaks matches that `move` cannot see |
+| L3 | Protect every doc that a file under `immutablePrefixes` names. | `move` never edits those files, so moving the doc would leave them stale for good; protecting only adds safety |
+| L4 | Folders the project's instructions call historical, frozen or not to be edited go in `immutablePrefixes`. | `move` then refuses to edit them; a guard, not something to check by eye in every dry run |
+| L5 | Never rename or move a doc that the agent instructions or the front door name as a starting point. | People and agents start there out of habit |
+| L6 | A how-to comes only from a doc that is already one task in steps. A broader guide stays a guide. | Turning a guide into a how-to is a rewrite, not a reorganisation |
+| L7 | Root files another tool's manifest names stay at the root (`rootAllowed`). | That tool reads them there |
+| L8 | Slices: the subject READMEs first (no moves), then the moves, then how-tos. The layout check goes into the tests in the slice where it first passes. | Each slice can be reviewed and reverted on its own, and no slice adds a failing test |
+| L9 | Merging overlapping docs (two guides for the same task) is not part of the reorganisation. The proposal lists them for later. | A merge is a content change; mixed into a move it hides in the diff |
+| L10 | The proposal note goes in `immutablePrefixes` in the same commit that adds it. | It is a record of the old paths; `move` must not rewrite it (H11) |
+
+A question reaches the owner only for what no rule can settle: who the `roles` are, a file that fits no subject and whose new subject is not obvious, and an override of a default.
+
 ### 6.4 Pins and how-tos — `/pin` (skill)
 
-An existing skill, used for real in one project, moves here and becomes project-neutral:
+An existing skill, used for real in one project, moved here in 0.3 and is now project-neutral (`skills/pin/`). It reads `docsRoot`, `subjects` and `roles` from `docs-kit.json`, adds `notes` or a how-to's subject to `subjects` (with a folder README) when it is missing, writes how-tos with `title`, `last_checked` and `roles`, runs `docs-kit index` and `docs-kit check`, and commits only the files it wrote:
 
 - `/pin [title]`: save a discussion to `docs/notes/<YYYY-MM-DD-HHMM>_<title>.md` with `pin_status: pinned`. Whole, not summarised. Claims marked Verified, Assumed or Open. Owner decisions in their own section.
 - `/pin --howto <subject> [title]`: save steps to `docs/<subject>/howto/HOWTO-<task>.md`, written in the spirit of ASD-STE100 (one action per step; say in which program and which window each step happens; never a secret in the file).
 - `/pin list`, `/pin promote <file> <target>`, `/pin drop <file> <reason>`.
 - `--print` makes the print copies (§6.5).
 
-When it moves, remove every project-specific script name from the skill text; it calls `docs-kit print`.
+It names no project script: printing goes through `docs-kit print`, and a test keeps it that way.
 
 ### 6.5 Print copies — `docs-kit print <file.md> [--version X.Y]`
 
-Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed; otherwise reports that printing was skipped. Warns about tables wider than the page. **Decided (2026-11-12):** `pandoc` only, no bundled fallback; when it is absent, printing is skipped with a message, never an error.
+Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed (or the one `DOCS_KIT_PANDOC` names); otherwise reports that printing was skipped. Warns about tables with more than five columns, which may run off a portrait page (long prose in a few columns wraps, so it is not a warning).
+
+- **Version:** `--version X.Y`, else the newest print copy's version one minor up, else `1.0`. The date is today (`--today` sets it).
+- **Per format:** each format pandoc makes replaces the older copies of that format; a format that fails (a `.pdf` needs a PDF engine) keeps them and says why.
+- **Exit:** 0 when a copy was made, and when pandoc is absent and printing was skipped; 1 when pandoc ran and made no copy; 2 for a wrong argument. **Decided (2026-11-12):** `pandoc` only, no bundled fallback; when it is absent, printing is skipped with a message, never an error.
 
 ### 6.6 Snapshot routing — a small library
 
@@ -191,7 +213,7 @@ Node first. A Python port is a later option, only if a trial project needs it.
    - `immutablePrefixes`: migration folders that exist (hazard H3), and the files another tool vendors with a checksum (`govkit.json` `files`), so `move` never edits them;
    - `snapshotTopics`: any `<subject>/snapshots/<topic>/` folders;
    - `protected` and `roles` stay empty: only the owner knows them. `init` says so.
-   - **Planned for 0.3:** `init` suggests `protected` paths. It lists each doc that a file under `immutablePrefixes` names by its repo-root path (for example a migration whose comment cites a doc as its spec), with the files that name it. Moving such a doc would leave those references stale for good, because `move` never edits immutable files. `init` prints the suggestions, and `--json` includes them, but it never writes them: `protected` stays the owner's choice, and `/docs-kit-init` asks about each one.
+   - **Planned for 0.3:** `init` fills `protected` with each doc that a file under `immutablePrefixes` names by its repo-root path (for example a migration whose comment cites a doc as its spec), with the reason and the files that name it (default L3, §6.3). Moving such a doc would leave those references stale for good, because `move` never edits immutable files. Protecting only adds safety, so it is written without asking; `init` prints each one, and the owner removes any that is wrong. Other `protected` paths (seeds, URLs, code that reads a doc) still need the owner.
 2. Adds `docs/README.md` (the front door) when it is missing.
 3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`. `--no-package` leaves `package.json` alone, for a repo that does not want the dependency; the check then runs with `npx`.
 4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default. **The test is written only when the check passes.** While it fails, `init` skips the test and says so: a failing test would block every commit during the reorganisation. It goes in with the reorganisation's last slice (§6.3 step 5).
@@ -201,7 +223,7 @@ Node first. A Python port is a later option, only if a trial project needs it.
 **`/docs-kit-init`** (skill, in the plugin, §8). The owner should never need to know what to type next, so the skill asks every decision in **one prompt**, then ends with **one question**:
 
 1. Read-only first: preflight (branch, uncommitted changes, the project's rules), `init --dry-run`, where tests live, and `protected` candidates (docs named by files under `immutablePrefixes`, seeds, or code that reads a doc).
-2. One prompt, each question with a recommended answer: the **branch** (a new one when on the default, a shared or an unrelated branch), the **devDependency** (or `--no-package`), the **test file**, and the **`protected`** paths.
+2. One prompt, each question with a recommended answer: the **branch** (a new one when on the default, a shared or an unrelated branch), the **devDependency** (or `--no-package`), the **test file**, and the **`protected`** paths. From 0.3 the prompt asks only what no default settles: it shows the defaults it applies (L3 and L4 in §6.3) as lines to override, not questions.
 3. Runs `init`, writes the chosen `protected` paths, runs the install, and explains each check finding. `roles` waits for the reorganisation proposal, because `roles` with no how-tos fails the check.
 4. One question: commit the setup files (only those, by name) on the branch, with a proposed message. It never pushes.
 5. One next step: the read-only audit that starts the reorganisation (§6.3). It never moves a doc before the owner approves a proposal.
@@ -210,7 +232,7 @@ The project's own agent instructions (branch rules, commit style, dependency rul
 
 ## 7. Hazards found in a real reorganisation
 
-Each hazard below happened, or nearly happened, during one reorganisation of a large `docs/` tree. Each has a guard in the tools. The audit step checks for all of them.
+Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 and H12 in Trial 1. Each has a guard in the tools. The audit step checks for all of them.
 
 | # | Hazard | What goes wrong | Guard |
 |---|---|---|---|
@@ -224,10 +246,12 @@ Each hazard below happened, or nearly happened, during one reorganisation of a l
 | H8 | A path is followed by a full stop at the end of a sentence | The rewrite pattern skips it | The pattern allows trailing punctuation |
 | H9 | A repo-wide rewrite changes files outside the folders you stage | Changes stay uncommitted across several PRs | The mover prints every changed file and ends with `git status --porcelain` |
 | H10 | A test scanner reads zero files after a move | The check passes vacuously | Every scanning check asserts a non-empty set |
+| H11 | The proposal that records the reorganisation names the old paths | `move` rewrites the record's "old" column, so the record shows every file moving to where it already is | The proposal note goes in `immutablePrefixes` when it is written (L10) |
+| H12 | A renamed file is named in a link label, or by its file name alone with no path | The link target follows the move, but the label still shows the old name, and the bare name is neither rewritten nor reported | `move` rewrites a label that is exactly the old name or path, and lists every other bare mention for review (§6.2 step 9) |
 
 ## 8. Distribution
 
-- **Plugin:** the skills (`/docs-kit-init`, then `/pin`, `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
+- **Plugin:** the skills (`/docs-kit-init` and `/pin`, then `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
 - **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
 - **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version.
 
@@ -247,8 +271,8 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 | 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
 | 0.2 | `docs-kit init` (§6.7), and the plugin with `/docs-kit-init` | `init` sets up a fixture repo, and running it again changes nothing; the skill sets up a repo from the plugin |
 | Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.4 |
-| 0.3 | `/pin` (neutral), `print`; `init` suggests `protected` paths (§6.7) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` lists that doc as a suggestion and leaves `protected` empty |
-| 0.4 | `/docs-reorg`, snapshot library | Used end to end on a trial repo |
+| 0.3 | `/pin` (neutral), `print`; `init` protects what immutable files name (L3, §6.7); `/docs-kit-init` asks only what no default settles; `move` follows renamed files by name (below) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` writes that doc to `protected` with its reason, and running it again changes nothing |
+| 0.4 | `/docs-reorg` applying the least-change defaults (§6.3), snapshot library | Used end to end on a trial repo, where the owner answers only `roles` and approves the proposal once |
 | Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
 | Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
 | Clean-up | Retire the older docs-generator template in the house standards repo | Nothing points to it |
@@ -260,6 +284,14 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 **Decided (2026-11-12):** 0.2.1 makes setup take two answers (§6.7). In Trial 1 the owner had to know to ask for a new branch, approve the dependency, the install and the commit, and start the audit; the skill now asks all of that itself.
 
 **Decided (2026-11-12):** 0.3 also adds `protected` suggestions to `init` (§6.7). In Trial 1's setup, the skill had to search by hand to find a doc that applied migrations cite; `init` can find these itself.
+
+**Trial 1 result (2026-11-13).** Adopted in four slices: setup and proposal, subject READMEs, the moves, the first how-to. Its `docs/` follows the rule, the check runs in its tests, and `index` lists its how-to by role. `move` rewrote every path outside `docs/` that named a moved doc (agent instructions, an env example, scripts, a test constant), with no edits by hand. What it taught:
+
+- Too many judgement calls reached the owner: hence the least-change defaults (§6.3) and setup in two answers (§6.7, 0.2.1).
+- `move` rewrote the proposal that recorded the move: H11, guarded by L10.
+- When a move **renames** a file, two references go stale that `move` neither rewrites nor reports: a link label that shows the old file name (`[OLD.md](OLD.md)`: the target is rewritten, the label is not), and the old file name written alone, with no path. **Planned for 0.3:** `move` rewrites a link label that is exactly the old file name or path, and lists every other line in a tracked text file that names the old file name, for review. A move that keeps the name (L2) has neither problem.
+
+**Decided (2026-11-13):** the least-change defaults (§6.3, L1 to L9). In Trial 1 the owner was asked a dozen judgement calls (branch, dependency, test path, what to protect, folder and file renames, historical docs, new subjects, which docs become how-tos). Almost all had one safe answer. Defaults now settle those, so the owner answers `roles` and approves the proposal once. With that, 0.3's `protected` suggestions are written by `init` rather than only suggested, because protecting only adds safety.
 
 ## 11. Owner questions
 

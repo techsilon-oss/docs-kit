@@ -54,9 +54,29 @@ test('detect: subjects, bootstrap docs, doc maps, immutable files and snapshot t
   assert.deepEqual(config.docMaps, [{ file: 'scripts/source-doc-map.json', path: 'mappings[].docs[]' }]);
   assert.deepEqual(config.immutablePrefixes, ['supabase/migrations/', 'scripts/gate.ts', 'scripts/sync-check.mjs']);
   assert.deepEqual(config.snapshotTopics, { architecture: 'platform' });
-  assert.deepEqual(config.protected, {});
+  assert.deepEqual(Object.keys(config.protected), ['docs/HUB.md', 'docs/guides/setup.md'], 'docs that immutable files name (L3)');
+  assert.match(config.protected['docs/guides/setup.md'], /named by supabase\/migrations\/001_init\.sql, which move never edits/);
   assert.deepEqual(config.roles, []);
   assert.ok(notes.some((n) => n.includes('docs/HUB.md stays at the docs root, because govkit.json names it')), notes.join('\n'));
+}));
+
+test('L3: init protects a doc an immutable file names, and only docs that exist; a second run changes nothing', withRepo({
+  ...MESSY,
+  'supabase/migrations/002_more.sql': "-- spec: docs/architecture/overview.md. Also docs/gone.md and docs/architecture/overview.mdx\n",
+  'src/app.js': "// docs/ONBOARDING.md is not immutable, so it is not protected\n",
+}, (root) => {
+  const r = run(root, 'init');
+  assert.equal(r.status, 0, r.stderr);
+  const cfg = loadConfig(root);
+  assert.deepEqual(Object.keys(cfg.protected), ['docs/HUB.md', 'docs/architecture/overview.md', 'docs/guides/setup.md']);
+  assert.match(r.stdout, /protected: docs\/architecture\/overview\.md, because supabase\/migrations\/002_more\.sql names it .*\(L3\)/);
+  // The mover then refuses to move it, with the reason.
+  const mv = run(root, 'move', 'docs/architecture/overview.md', 'docs/guides/overview.md', '--dry-run');
+  assert.equal(mv.status, 2);
+  assert.match(mv.stderr, /is protected \(named by supabase\/migrations\/002_more\.sql/);
+  const before = read(root, 'docs-kit.json');
+  assert.equal(run(root, 'init').status, 0);
+  assert.equal(read(root, 'docs-kit.json'), before);
 }));
 
 test('detect: a doc map that selects nothing is left out', withRepo({

@@ -2,6 +2,24 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.3.0] - 2026-11-13
+
+### Added
+
+- `docs-kit print`: `.docx` and `.pdf` print copies beside the source with pandoc, named `<NAME>_v<X.Y>_<YYYY-MM-DD>`, only the newest kept; the version goes one minor up unless `--version` sets it; warns about tables with more than five columns; skipped with a message when pandoc is absent (DESIGN §6.5).
+- `/pin` in the plugin, now project-neutral: dated notes in `docs/notes/` and how-tos in `docs/<subject>/howto/` with `title`, `last_checked` and `roles`; runs `index` and `check`; prints through `docs-kit print` (DESIGN §6.4).
+- `docs-kit init` protects every doc that a file under `immutablePrefixes` names, with the files that name it (least-change default L3).
+- DESIGN §6.3: the least-change defaults (L1 to L10) a reorganisation applies without asking, so the owner answers `roles` and approves the proposal once.
+- Hazard H11: `move` rewrites the proposal note that records the move. Guard: the note goes in `immutablePrefixes` when it is written (L10); a test reproduces the hazard.
+- DESIGN §10: the Trial 1 result.
+- `docs-kit move` follows a renamed file by name (hazard H12): a link label that is the old name or path is rewritten, and every other bare mention of the old name is listed for review.
+
+### Changed
+
+- `/docs-kit-init` applies the least-change defaults and shows them in one prompt to approve or change; it asks separately only for what no rule settles.
+- Front matter: a trailing `# comment` after a value or a `[list]` is ignored.
+- `--version` prints the version only as the first argument, so `print --version X.Y` works.
+
 ## [0.2.1] - 2026-11-12
 
 ### Added

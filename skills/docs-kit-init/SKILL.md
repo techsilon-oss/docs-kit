@@ -1,13 +1,13 @@
 ---
 name: docs-kit-init
-description: Set up docs-kit in the current repo in two answers. Asks everything up front (branch, devDependency, test file, protected paths), runs `docs-kit init`, explains what the layout check found, commits the setup on a yes, and offers the guided reorganisation. Never overwrites, never pushes, never moves a doc. Use when a repo adopts docs-kit, or when docs-kit.json is missing.
+description: Set up docs-kit in the current repo in two answers. Applies the least-change defaults (branch, devDependency, test file, protected and frozen paths), shows them in one prompt to approve or override, runs `docs-kit init`, explains what the layout check found, commits the setup on a yes, and offers the guided reorganisation. Never overwrites, never pushes, never moves a doc. Use when a repo adopts docs-kit, or when docs-kit.json is missing.
 argument-hint: "[--docs-root <dir>]"
 allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" init*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" check*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" --version) Bash(git rev-parse *) Bash(git status *) Bash(git branch *) Bash(git symbolic-ref *) Bash(git grep *) Bash(git ls-files *) Bash(git diff *) Bash(node --version) Read Glob Grep
 ---
 
 # /docs-kit-init — set up docs-kit in this repo
 
-`docs-kit init` does the setup. This skill runs it, and adds what needs judgement. The owner should never need to know what to type next: ask every decision up front in **one** prompt, do the work, then end with **one** question.
+`docs-kit init` does the setup. This skill runs it, and adds what needs judgement. The owner should never need to know what to type next, and should not be asked what a rule settles: apply the defaults, show them in **one** prompt to approve or override, do the work, then end with **one** question.
 
 The CLI is the plugin's own copy: `node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs"`. Below it is written as `DOCS_KIT`. Run it from the repo root.
 
@@ -42,21 +42,21 @@ If `docs-kit.json` exists, say so: `init` keeps it and only adds what is missing
    - No test runner: propose none, and say that `npm run docs:check` (or the npx command) can run in CI.
 
    Use `.ts` only if the repo's tests are TypeScript. `init` writes the test only once the check passes; while it fails, the path is kept for the last slice of the reorganisation.
-3. **Protected candidates**: doc paths that must never move because something outside the docs uses the path. Use `git grep -n "docs/"` outside the docs root, and look for:
-   - files under `immutablePrefixes` (from the dry run's "Found:" lines) that name a doc, for example a migration that cites a doc as its spec. `move` never edits those files, so moving the doc leaves them stale for good;
-   - doc paths in database seeds, in code that reads a doc at run time (a help page that loads `docs/...`), and in URLs other systems link to.
+3. **Protected paths.** `init` already protects every doc that a file under `immutablePrefixes` names (default L3; the dry run's "Found:" lines list them). Look for the others, which need the owner: doc paths in database seeds, in code that reads a doc at run time (a help page that loads `docs/...`), and in URLs other systems link to. Use `git grep -n "docs/"` outside the docs root. Give each its reason. A test or a script that names a doc by its full path is **not** one: `move` rewrites it. List it as a hazard for the reorganisation instead.
+4. **Frozen folders** (default L4): folders under the docs root that the project's instructions call historical, frozen, or not to be edited. They go in `immutablePrefixes`, so `move` never edits them.
+5. **Roles** (for later): who reads the how-tos (for example `customer`, `support`, `admin`), from the app's own roles. Short lower-case names; none if the app has one kind of user. Do not ask about them now: `roles` is written only once how-tos exist (with `roles` set and no how-tos, the check fails). They go in the reorganisation proposal.
 
-   Give each candidate its reason. A test that names a doc by its full path is **not** a candidate: `move` rewrites it. List it as a hazard for the reorganisation instead.
-4. **Roles** (for later): who reads the how-tos (for example `customer`, `support`, `admin`), from the app's own roles. Short lower-case names; none if the app has one kind of user. Do not ask about them now: `roles` is written only once how-tos exist (with `roles` set and no how-tos, the check fails). They go in the reorganisation proposal.
+## Step 3 — One prompt: the defaults, to approve or override
 
-## Step 3 — One prompt, every decision
+Show the dry run's plan in a few lines (what it creates or updates, and the "Found:" lines that explain `docs-kit.json`). Then show the defaults you will apply, one line each, with the reason:
 
-Show the dry run's plan in a few lines (what it creates or updates, and the "Found:" lines that explain `docs-kit.json`). Then ask, in one prompt, only the questions that apply:
-
-1. **Branch.** If the current branch is the default branch, a shared branch named in the project's rules (such as `dev`), or a feature branch for other work, recommend a new branch from here, named by the project's rules or else `docs/adopt-docs-kit`. Uncommitted changes come along and stay out of the setup commit. If the current branch is already for this work, recommend staying.
-2. **Dependency.** Only when the dry run updates `package.json`: "Add `docs-kit` as a devDependency pinned to `v<version>`, and a `docs:check` script? It has no dependencies of its own and never ships with the app." Recommend yes, unless the project's rules say not to add one. The other answer is `--no-package`: `package.json` stays as it is, and the check runs with `npx github:techsilon-oss/docs-kit#v<version> check`.
+1. **Branch.** On the default branch, a shared branch named in the project's rules (such as `dev`), or a feature branch for other work: a new branch from here, named by the project's rules or else `docs/adopt-docs-kit`. Uncommitted changes come along and stay out of the setup commit. On a branch already for this work: stay.
+2. **Dependency.** When the dry run updates `package.json`: add `docs-kit` as a devDependency pinned to `v<version>`, and a `docs:check` script. It has no dependencies of its own and never ships with the app. When the project's rules say not to add a dependency without asking, this line becomes a question; declining means `--no-package`, and the check runs with `npx github:techsilon-oss/docs-kit#v<version> check`.
 3. **Test file.** The path from step 2, or none.
-4. **Protected.** Each candidate with its reason (multi-select), or "none found" without a question.
+4. **Protected.** The docs `init` protects (L3), with the files that name them.
+5. **Frozen.** The folders from step 2 that go in `immutablePrefixes` (L4).
+
+Ask one question: "Apply these?" — apply (Recommended), or change something. Add a separate question only for what no rule settles: a protected path found in seeds, code or URLs (step 2), or a dependency the project's rules say to ask about. On "change something", take the owner's changes and go on; do not ask again.
 
 ## Step 4 — Do the work
 
@@ -64,7 +64,7 @@ On the answers, in order:
 
 1. Create the branch if chosen (`git switch -c <name>`).
 2. Run `DOCS_KIT init` with `--test <path>` if a path was chosen and `--no-package` if the dependency was declined. Show the output as printed.
-3. Add the chosen protected paths to `protected` in `docs-kit.json`, each with its reason, then run `DOCS_KIT check`.
+3. In `docs-kit.json`: add any other protected paths the owner approved to `protected`, each with its reason, and the frozen folders to `immutablePrefixes`. Remove any protected path the owner rejected. Then run `DOCS_KIT check`.
 4. If `init` added the devDependency, run the project's install (`npm install`, or the lockfile's tool: `pnpm`, `yarn`, `bun`). The yes in step 3 covers it.
 
 ## Step 5 — Explain the findings
@@ -99,10 +99,10 @@ If the check passed, the setup is done: say so, and stop.
 If it failed, ask one question: "Start the reorganisation with a read-only audit?" (Recommended), or stop here. On a yes, follow DESIGN §6.3 of docs-kit (https://github.com/techsilon-oss/docs-kit/blob/main/docs/DESIGN.md):
 
 1. **Audit**, read-only: every file under the docs root, every doc path named outside it, generators, `.gitignore` rules, path-based keys, and paths built in pieces.
-2. **Proposal**, saved as a dated note in `docs/notes/`: the subject list, an old → new table for every file, protected paths with reasons, the roles from step 2, the hazards found, and the slices (one pull request each).
-3. **The owner approves** the subjects, the names and the roles. Nothing moves before that.
+2. **Proposal**, saved as a dated note in `docs/notes/`: the subject list, an old → new table for every file, protected paths with reasons, the roles from step 2, the hazards found, and the slices (one pull request each). Apply the least-change defaults (DESIGN §6.3, L1 to L10) and list the ones you applied, so the owner can override any. Add the note itself to `immutablePrefixes` in the same commit (L10): it records the old paths, and `move` must not rewrite it.
+3. **The owner approves** the proposal once. Ask about `roles` before that, if the repo will have how-tos; ask nothing else a default settles. Nothing moves before the approval.
 4. **Each slice:** `DOCS_KIT move <old> <new> --dry-run`, then `move`, then the project's tests and `DOCS_KIT check`. Stage everything `git status` lists, not only the docs folders. Open the pull request.
-5. **Close:** once the check passes, run `DOCS_KIT init --test <path>` with the path from step 3, so the check runs in the tests; add `roles` and run `DOCS_KIT index` if the how-tos exist. Record the decision in the project's decision log.
+5. **Close:** once the check passes, run `DOCS_KIT init --test <path>` with the path from step 2, so the check runs in the tests; add `roles` and run `DOCS_KIT index` if the how-tos exist. Record the decision in the project's decision log.
 
 ## If something fails
 

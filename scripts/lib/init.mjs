@@ -110,13 +110,15 @@ export function detectConfig(root, docsRoot = DEFAULTS.docsRoot) {
     else if (snapshotTopics[topic] !== subject) notes.push(`snapshotTopics: "${topic}" is under ${snapshotTopics[topic]} and ${subject}; kept ${snapshotTopics[topic]}`);
   }
 
+  const prot = protectNamedDocs(root, docsRoot, immutablePrefixes, listDocFiles(root, docsRoot), notes);
+
   const config = {
     docsRoot,
     subjects,
     rootAllowed,
     rootAllowedTools: {},
     docMaps,
-    protected: {},
+    protected: prot,
     immutablePrefixes,
     snapshotTopics,
     howtoStaleDays: DEFAULTS.howtoStaleDays,
@@ -127,6 +129,47 @@ export function detectConfig(root, docsRoot = DEFAULTS.docsRoot) {
 }
 
 const j = (v) => JSON.stringify(v);
+
+const MAX_TEXT_BYTES = 8 * 1024 * 1024;
+const escapeRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Least-change default L3 (DESIGN §6.3): protect every doc that a file under
+ * immutablePrefixes names by its repo-root path. move never edits those
+ * files, so moving the doc would leave them stale for good. Protecting only
+ * adds safety, so init writes these without asking.
+ */
+export function protectNamedDocs(root, docsRoot, immutablePrefixes, docFiles, notes = []) {
+  const docs = new Set(docFiles);
+  const re = new RegExp(`(?<![A-Za-z0-9_\\-.~%+@/])${escapeRe(docsRoot)}/[A-Za-z0-9_\\-.~%+@/]+`, 'g');
+  const namedBy = new Map();
+  const files = immutablePrefixes.length ? trackedFiles(root, immutablePrefixes) : [];
+  for (const f of files) {
+    let buf;
+    try { buf = readFileSync(join(root, f)); } catch { continue; }
+    if (buf.length > MAX_TEXT_BYTES || buf.subarray(0, 8000).includes(0)) continue;
+    for (const m of buf.toString('utf8').matchAll(re)) {
+      const p = m[0].replace(/[.,;:!?]+$/, '');
+      if (!docs.has(p)) continue;
+      if (!namedBy.has(p)) namedBy.set(p, new Set());
+      namedBy.get(p).add(f);
+    }
+  }
+  const prot = {};
+  for (const p of [...namedBy.keys()].sort()) {
+    const by = [...namedBy.get(p)].sort();
+    const list = by.length > 3 ? `${by.slice(0, 3).join(', ')} and ${by.length - 3} more` : by.join(', ');
+    prot[p] = `named by ${list}, which move never edits; moving it would leave ${by.length === 1 ? 'that file' : 'them'} stale`;
+    notes.push(`protected: ${p}, because ${list} name${by.length === 1 ? 's' : ''} it and move never edits ${by.length === 1 ? 'that file' : 'those files'} (L3)`);
+  }
+  return prot;
+}
+
+function renderObject(obj) {
+  const entries = Object.entries(obj);
+  if (!entries.length) return '{}';
+  return `{\n${entries.map(([k, v]) => `    ${j(k)}: ${j(v)},`).join('\n')}\n  }`;
+}
 
 /** docs-kit.json text: the detected values, one comment per key. */
 export function renderConfig(cfg, version) {
@@ -144,8 +187,9 @@ export function renderConfig(cfg, version) {
     `  "rootAllowedTools": ${j(cfg.rootAllowedTools)},`,
     '  // JSON files that list doc paths which must exist.',
     `  "docMaps": ${j(cfg.docMaps)},`,
-    '  // Paths that must never move, with the reason (hazard H2). Only you know these: add them.',
-    `  "protected": ${j(cfg.protected)},`,
+    '  // Paths that must never move, with the reason (hazard H2). init protects docs that immutable files name;',
+    '  // add any other path a database, a URL or code uses as a key.',
+    `  "protected": ${renderObject(cfg.protected)},`,
     '  // Files the mover never edits (hazard H3).',
     `  "immutablePrefixes": ${j(cfg.immutablePrefixes)},`,
     '  // Snapshot topic -> subject: <docsRoot>/<subject>/snapshots/<topic>/<TOPIC>_<YYYY-MM-DD>.md',
@@ -379,7 +423,7 @@ export function nextSteps(plan, result) {
     steps.push('Run npm install, so the docs-kit devDependency is fetched.');
   }
   if (!plan.configExists) {
-    steps.push(`Add to ${CONFIG_FILE} what only you know: "protected" paths (a doc path a database or another system uses as a key) and "roles" (who reads your how-tos).`);
+    steps.push(`Add to ${CONFIG_FILE} what only you know: other "protected" paths (a doc path a database, a URL or code uses as a key) and "roles" (who reads your how-tos).`);
   }
   const deferred = plan.changes.find((c) => c.deferred);
   if (deferred) {

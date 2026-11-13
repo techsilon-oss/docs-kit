@@ -58,6 +58,55 @@ test('H3: an immutable file that names the moved path is left byte for byte', wi
   assert.throws(() => move(root, [['db/migrations/001_seed.sql', 'db/001_seed.sql']], { cfg }), /immutable/);
 }));
 
+test('H11: the proposal that records a move is left as written once it is immutable', withFixture({}, (root, cfg) => {
+  const note = 'docs/notes/2026-01-01-reorganisation.md';
+  const table = '| Old | New |\n|---|---|\n| `docs/legal/TERMS.md` | `docs/legal/TERMS-OF-USE.md` |\n';
+  writeFileSync(join(root, note), `# Proposal\n\n${table}`);
+  git(root, 'add', note);
+  git(root, 'commit', '-q', '-m', 'proposal');
+  const pair = [['docs/legal/TERMS.md', 'docs/legal/TERMS-OF-USE.md']];
+  // The hazard: without the guard, the dry run rewrites the record's "old" column.
+  const unguarded = move(root, pair, { cfg, dryRun: true });
+  assert.ok(unguarded.rewritten.includes(note), 'the hazard reproduces');
+  // The guard: the proposal note goes in immutablePrefixes when it is written (L10).
+  const guarded = { ...cfg, immutablePrefixes: [...cfg.immutablePrefixes, note] };
+  const before = read(root, note);
+  const r = move(root, pair, { cfg: guarded });
+  assert.equal(read(root, note), before, 'the record still shows the old path');
+  assert.ok(r.immutableHits.includes(note));
+}));
+
+test('H12: a rename rewrites a link label that shows the old name, and lists the old name written alone', withFixture({}, (root, cfg) => {
+  const doc = 'docs/legal/INDEX-OF-TERMS.md';
+  writeFileSync(join(root, doc), [
+    '# Index',
+    '',
+    '- [TERMS.md](TERMS.md)',
+    '- [`docs/legal/TERMS.md`](TERMS.md)',
+    '- [the terms](TERMS.md)',
+    '',
+    'Ask about TERMS.md first.',
+    'Not this: OLD-TERMS.md or TERMS.mdx.',
+    '',
+  ].join('\n'));
+  writeFileSync(join(root, 'scripts/notes.txt'), 'the file TERMS.md\n');
+  git(root, 'add', doc, 'scripts/notes.txt');
+  git(root, 'commit', '-q', '-m', 'index');
+  const r = move(root, [['docs/legal/TERMS.md', 'docs/legal/TERMS-OF-USE.md']], { cfg });
+  const text = read(root, doc);
+  assert.match(text, /^- \[TERMS-OF-USE\.md\]\(TERMS-OF-USE\.md\)$/m, 'a label that is the old name follows it');
+  assert.match(text, /^- \[`docs\/legal\/TERMS-OF-USE\.md`\]\(TERMS-OF-USE\.md\)$/m, 'a label that is the old path follows it');
+  assert.match(text, /^- \[the terms\]\(TERMS-OF-USE\.md\)$/m, 'any other label is left as written');
+  assert.match(text, /^Ask about TERMS\.md first\.$/m, 'a bare name is not rewritten');
+  const hits = r.nameHits.map((h) => `${h.file}:${h.line}`).sort();
+  assert.deepEqual(hits, [`${doc}:7`, 'scripts/notes.txt:1'], JSON.stringify(r.nameHits));
+}));
+
+test('H12: a move that keeps the file name lists no old names', withFixture({}, (root, cfg) => {
+  const r = move(root, [['docs/legal/TERMS.md', 'docs/money/TERMS.md']], { cfg: { ...cfg, subjects: [...cfg.subjects, 'money'] }, dryRun: true });
+  assert.deepEqual(r.nameHits, []);
+}));
+
 test('H4: gitignore rules follow the move, so confidential files stay ignored', withFixture({}, (root, cfg) => {
   const r = move(root, [['docs/legal', 'docs/money/legal']], { cfg: { ...cfg, subjects: [...cfg.subjects, 'money'] } });
   const gi = read(root, '.gitignore');
