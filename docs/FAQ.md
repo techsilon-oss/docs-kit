@@ -22,6 +22,10 @@ Because the check fails. A failing test would block every commit while you reorg
 
 A file that `move` never edits, such as an applied migration, names that doc by its path. Moving the doc would leave that file pointing at nothing, for good. If the reason no longer holds, remove the path from `protected`. See [DESIGN §6.3, default L3](DESIGN.md#63-guided-reorganisation--docs-kit-reorg-skill).
 
+## Our generated docs are gitignored. Does the check fail on them?
+
+No. If git ignores a snapshot topic's folder, the check reports the topic as local-only, and does not ask for its snapshots. Keep the archive folder ignored too. See [Route generated docs to snapshots](guides/howto/HOWTO-route-generated-docs.md).
+
 ## Can a release change after I pin it?
 
 No. Release tags never move: a bad release is fixed by a new release. For a stricter pin, use a commit instead of a tag. See [What it does on your machine](../README.md#what-it-does-on-your-machine).
