@@ -2,17 +2,17 @@
   "name": "docs-kit-marketplace",
   "description": "Marketplace for docs-kit: one layout for docs/, and the tools to keep it.",
   "owner": {
-    "name": "TechSilon LLC",
+    "name": "Techsilon LLC",
     "email": "oss@techsilon.com"
   },
   "plugins": [
     {
       "name": "docs-kit",
-      "description": "One layout for docs/ in any repo: set it up with /docs-kit-init, check it, move docs without breaking a link or path, and save notes and how-tos with /pin.",
-      "version": "0.3.0",
+      "description": "One layout for docs/ in any repo: a check that keeps it, a mover that keeps every link and path working, and notes and how-tos. Help: /docs-kit-help",
+      "version": "0.3.1",
       "source": "./",
       "author": {
-        "name": "TechSilon LLC",
+        "name": "Techsilon LLC",
         "email": "oss@techsilon.com"
       }
     }

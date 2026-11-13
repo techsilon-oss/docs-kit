@@ -1,7 +1,7 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. Later steps are not built yet.
-> **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/docs-kit-pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. v0.3.1 (2026-11-13) brings docs-kit in line with the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md): skill names with the `docs-kit-` prefix, `/docs-kit-help`, pre-approval of the plugin's own scripts only, Apache-2.0, and docs that follow the layout. Later steps are not built yet.
+> **Owner:** Techsilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
 
@@ -19,7 +19,7 @@ One maintained standard, usable in any repo, that answers "where is X?" the same
 2. a **layout check** that fails when the rule is broken;
 3. a **mover** that moves docs and keeps every reference working;
 4. a **guided reorganisation** for a repo that does not follow the rule yet;
-5. **pins and how-tos** (`/pin`), so analysis and instructions are not lost in chats;
+5. **pins and how-tos** (`/docs-kit-pin`), so analysis and instructions are not lost in chats;
 6. **snapshot routing** for generated docs;
 7. **print copies** (.docx and .pdf) beside their source.
 
@@ -28,7 +28,7 @@ One maintained standard, usable in any repo, that answers "where is X?" the same
 ## 3. Non-goals
 
 - Not a docs website generator. The output is Markdown in the repo.
-- Not a writing-style linter, except the how-to writing rule in `/pin`.
+- Not a writing-style linter, except the how-to writing rule in `/docs-kit-pin`.
 - Does not decide a project's subjects. It gives a starting list and the project edits it.
 - **Not feature records or test traceability.** **Decided (2026-11-12):** records that tie code to a feature, a test case and an automated test belong to [qa-kit](https://github.com/techsilon-oss/qa-kit). docs-kit holds a feature's design and plans (`<subject>/features/<feature>/`) and may link to qa-kit's records, but never defines their format or checks them.
 
@@ -144,7 +144,7 @@ For each pair (file or folder):
 8. Runs `docs-kit check` at the end.
 9. **Follows a renamed file by name** (hazard H12). When a move changes a file's name, not only its folder: a link label that is exactly the old file name, the old destination or the old repo path becomes the new one (`[OLD.md](OLD.md)` becomes `[NEW.md](NEW.md)`); every other line in a tracked text file that names the old file name alone, with no path, is listed for review and not rewritten, because a bare name in prose may mean something else.
 
-### 6.3 Guided reorganisation — `/docs-reorg` (skill)
+### 6.3 Guided reorganisation — `/docs-kit-reorg` (skill)
 
 For a repo that does not follow the rule. Never moves anything before the owner approves the proposal.
 
@@ -171,13 +171,13 @@ For a repo that does not follow the rule. Never moves anything before the owner 
 
 A question reaches the owner only for what no rule can settle: who the `roles` are, a file that fits no subject and whose new subject is not obvious, and an override of a default.
 
-### 6.4 Pins and how-tos — `/pin` (skill)
+### 6.4 Pins and how-tos — `/docs-kit-pin` (skill)
 
-An existing skill, used for real in one project, moved here in 0.3 and is now project-neutral (`skills/pin/`). It reads `docsRoot`, `subjects` and `roles` from `docs-kit.json`, adds `notes` or a how-to's subject to `subjects` (with a folder README) when it is missing, writes how-tos with `title`, `last_checked` and `roles`, runs `docs-kit index` and `docs-kit check`, and commits only the files it wrote:
+An existing skill, used for real in one project, moved here in 0.3 and is now project-neutral (`skills/docs-kit-pin/`). It was `/pin` in 0.3.0; 0.3.1 renamed it under the kit standard's prefix rule, and the old name stays as an alias until the first release on or after 2026-12-13. It reads `docsRoot`, `subjects` and `roles` from `docs-kit.json`, adds `notes` or a how-to's subject to `subjects` (with a folder README) when it is missing, writes how-tos with `title`, `last_checked` and `roles`, runs `docs-kit index` and `docs-kit check`, and commits only the files it wrote:
 
-- `/pin [title]`: save a discussion to `docs/notes/<YYYY-MM-DD-HHMM>_<title>.md` with `pin_status: pinned`. Whole, not summarised. Claims marked Verified, Assumed or Open. Owner decisions in their own section.
-- `/pin --howto <subject> [title]`: save steps to `docs/<subject>/howto/HOWTO-<task>.md`, written in the spirit of ASD-STE100 (one action per step; say in which program and which window each step happens; never a secret in the file).
-- `/pin list`, `/pin promote <file> <target>`, `/pin drop <file> <reason>`.
+- `/docs-kit-pin [title]`: save a discussion to `docs/notes/<YYYY-MM-DD-HHMM>_<title>.md` with `pin_status: pinned`. Whole, not summarised. Claims marked Verified, Assumed or Open. Owner decisions in their own section.
+- `/docs-kit-pin --howto <subject> [title]`: save steps to `docs/<subject>/howto/HOWTO-<task>.md`, written in the spirit of ASD-STE100 (one action per step; say in which program and which window each step happens; never a secret in the file).
+- `/docs-kit-pin list`, `/docs-kit-pin promote <file> <target>`, `/docs-kit-pin drop <file> <reason>`.
 - `--print` makes the print copies (§6.5).
 
 It names no project script: printing goes through `docs-kit print`, and a test keeps it that way.
@@ -251,9 +251,11 @@ Each hazard below happened, or nearly happened, during a real reorganisation: H1
 
 ## 8. Distribution
 
-- **Plugin:** the skills (`/docs-kit-init` and `/pin`, then `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
+- **Plugin:** the skills (`/docs-kit-init`, `/docs-kit-pin` and `/docs-kit-help`, then `/docs-kit-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
 - **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
-- **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version.
+- **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version. Release tags never move (a tag ruleset blocks it).
+- **License:** Apache License 2.0 with a `NOTICE`, from 0.3.1. Earlier releases stay MIT.
+- **The kit standard:** docs-kit follows the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md). Tests enforce its plugin rules (skill prefix, `allowed-tools`, help skill, license) and its documentation rules for docs-kit's own docs (the layout, the commands they show, the version they pin, their links).
 
 ## 9. govkit module (optional)
 
@@ -270,16 +272,16 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 |---|---|---|
 | 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
 | 0.2 | `docs-kit init` (§6.7), and the plugin with `/docs-kit-init` | `init` sets up a fixture repo, and running it again changes nothing; the skill sets up a repo from the plugin |
-| Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.4 |
-| 0.3 | `/pin` (neutral), `print`; `init` protects what immutable files name (L3, §6.7); `/docs-kit-init` asks only what no default settles; `move` follows renamed files by name (below) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` writes that doc to `protected` with its reason, and running it again changes nothing |
-| 0.4 | `/docs-reorg` applying the least-change defaults (§6.3), snapshot library | Used end to end on a trial repo, where the owner answers only `roles` and approves the proposal once |
+| Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-kit-reorg` in 0.4 |
+| 0.3 | `/docs-kit-pin` (neutral), `print`; `init` protects what immutable files name (L3, §6.7); `/docs-kit-init` asks only what no default settles; `move` follows renamed files by name (below) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` writes that doc to `protected` with its reason, and running it again changes nothing |
+| 0.4 | `/docs-kit-reorg` applying the least-change defaults (§6.3), snapshot library | Used end to end on a trial repo, where the owner answers only `roles` and approves the proposal once |
 | Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
 | Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
 | Clean-up | Retire the older docs-generator template in the house standards repo | Nothing points to it |
 
 **Decided (2026-11-12):** 0.1 is built first and on its own, in this repo, with no connection to any trial repo. Trial 1 then adopts the tagged release; nothing in this repo is written for it.
 
-**Decided (2026-11-12):** setup comes before Trial 1. 0.2 is `init` and the plugin with `/docs-kit-init` (§6.7), so the trial adopts the kit the way any repo would. `/pin` and `print` move to 0.3, `/docs-reorg` and the snapshot library to 0.4.
+**Decided (2026-11-12):** setup comes before Trial 1. 0.2 is `init` and the plugin with `/docs-kit-init` (§6.7), so the trial adopts the kit the way any repo would. `/docs-kit-pin` and `print` move to 0.3, `/docs-kit-reorg` and the snapshot library to 0.4.
 
 **Decided (2026-11-12):** 0.2.1 makes setup take two answers (§6.7). In Trial 1 the owner had to know to ask for a new branch, approve the dependency, the install and the commit, and start the audit; the skill now asks all of that itself.
 
