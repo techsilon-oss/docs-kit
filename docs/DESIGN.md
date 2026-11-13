@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Trial 1 was completed on 2026-11-13. Step 0.3 (`/pin`, `print`, `init` protecting what immutable files name, `move` following renamed files) is v0.3.0. Later steps are not built yet.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -142,6 +142,7 @@ For each pair (file or folder):
 6. **Searches for the path built in pieces** (`join("docs", "old")`, quoted segments `"old"`) and prints every hit for review. It does not rewrite them (hazard H7).
 7. **Prints every file it changed,** and ends with `git status --porcelain`. The caller must stage all of them (hazard H9).
 8. Runs `docs-kit check` at the end.
+9. **Follows a renamed file by name** (hazard H12). When a move changes a file's name, not only its folder: a link label that is exactly the old file name, the old destination or the old repo path becomes the new one (`[OLD.md](OLD.md)` becomes `[NEW.md](NEW.md)`); every other line in a tracked text file that names the old file name alone, with no path, is listed for review and not rewritten, because a bare name in prose may mean something else.
 
 ### 6.3 Guided reorganisation — `/docs-reorg` (skill)
 
@@ -150,6 +151,8 @@ For a repo that does not follow the rule. Never moves anything before the owner 
 1. **Audit** (read-only): inventory every file under `docs/` and every doc path referenced outside it; group by likely subject; find generators, gitignore rules, path-based keys and pieced-together paths (the hazard list is the checklist).
 2. **Proposal:** the subject list, the old → new table, the protected paths with reasons, the hazards found, and the slices. Written as a pin (`docs/notes/`) so it survives the session. It applies the least-change defaults below and lists each one it applied, so the owner can override any of them.
 3. **Owner approves** the whole proposal once. The only question asked before that is the `roles` list, when the repo will have how-tos. Each slice's pull request is then merged by the owner as usual; a slice raises a new question only when the check, the tests or `move` show something the proposal did not foresee.
+4. **Slices:** one pull request per slice (for example: front door and READMEs; one subject per slice; generators last). Each slice: `move --dry-run`, `move`, run the project's tests and `check`, stage everything changed, confirm a clean working tree, open the PR.
+5. **Close:** write `docs-kit.json`, add the layout check to the project's tests or CI, record the decision in the project's decision log.
 
 **Least-change defaults.** *Decided (2026-11-13; L10 added the same day from Trial 1).* A reorganisation applies these without asking. Each one is either the smallest change that satisfies the layout rule, or adds safety, so neither needs a judgement call. The owner can override any of them in the proposal. The project's own agent instructions win where they say otherwise.
 
@@ -167,23 +170,25 @@ For a repo that does not follow the rule. Never moves anything before the owner 
 | L10 | The proposal note goes in `immutablePrefixes` in the same commit that adds it. | It is a record of the old paths; `move` must not rewrite it (H11) |
 
 A question reaches the owner only for what no rule can settle: who the `roles` are, a file that fits no subject and whose new subject is not obvious, and an override of a default.
-4. **Slices:** one pull request per slice (for example: front door and READMEs; one subject per slice; generators last). Each slice: `move --dry-run`, `move`, run the project's tests and `check`, stage everything changed, confirm a clean working tree, open the PR.
-5. **Close:** write `docs-kit.json`, add the layout check to the project's tests or CI, record the decision in the project's decision log.
 
 ### 6.4 Pins and how-tos — `/pin` (skill)
 
-An existing skill, used for real in one project, moves here and becomes project-neutral:
+An existing skill, used for real in one project, moved here in 0.3 and is now project-neutral (`skills/pin/`). It reads `docsRoot`, `subjects` and `roles` from `docs-kit.json`, adds `notes` or a how-to's subject to `subjects` (with a folder README) when it is missing, writes how-tos with `title`, `last_checked` and `roles`, runs `docs-kit index` and `docs-kit check`, and commits only the files it wrote:
 
 - `/pin [title]`: save a discussion to `docs/notes/<YYYY-MM-DD-HHMM>_<title>.md` with `pin_status: pinned`. Whole, not summarised. Claims marked Verified, Assumed or Open. Owner decisions in their own section.
 - `/pin --howto <subject> [title]`: save steps to `docs/<subject>/howto/HOWTO-<task>.md`, written in the spirit of ASD-STE100 (one action per step; say in which program and which window each step happens; never a secret in the file).
 - `/pin list`, `/pin promote <file> <target>`, `/pin drop <file> <reason>`.
 - `--print` makes the print copies (§6.5).
 
-When it moves, remove every project-specific script name from the skill text; it calls `docs-kit print`.
+It names no project script: printing goes through `docs-kit print`, and a test keeps it that way.
 
 ### 6.5 Print copies — `docs-kit print <file.md> [--version X.Y]`
 
-Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed; otherwise reports that printing was skipped. Warns about tables wider than the page. **Decided (2026-11-12):** `pandoc` only, no bundled fallback; when it is absent, printing is skipped with a message, never an error.
+Makes `.docx` and `.pdf` beside the source with the naming rule, and removes the older print copies of the same doc. Uses `pandoc` when it is installed (or the one `DOCS_KIT_PANDOC` names); otherwise reports that printing was skipped. Warns about tables with more than five columns, which may run off a portrait page (long prose in a few columns wraps, so it is not a warning).
+
+- **Version:** `--version X.Y`, else the newest print copy's version one minor up, else `1.0`. The date is today (`--today` sets it).
+- **Per format:** each format pandoc makes replaces the older copies of that format; a format that fails (a `.pdf` needs a PDF engine) keeps them and says why.
+- **Exit:** 0 when a copy was made, and when pandoc is absent and printing was skipped; 1 when pandoc ran and made no copy; 2 for a wrong argument. **Decided (2026-11-12):** `pandoc` only, no bundled fallback; when it is absent, printing is skipped with a message, never an error.
 
 ### 6.6 Snapshot routing — a small library
 
@@ -227,7 +232,7 @@ The project's own agent instructions (branch rules, commit style, dependency rul
 
 ## 7. Hazards found in a real reorganisation
 
-Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 in Trial 1. Each has a guard in the tools. The audit step checks for all of them.
+Each hazard below happened, or nearly happened, during a real reorganisation: H1 to H10 in one large `docs/` tree, H11 and H12 in Trial 1. Each has a guard in the tools. The audit step checks for all of them.
 
 | # | Hazard | What goes wrong | Guard |
 |---|---|---|---|
@@ -242,10 +247,11 @@ Each hazard below happened, or nearly happened, during a real reorganisation: H1
 | H9 | A repo-wide rewrite changes files outside the folders you stage | Changes stay uncommitted across several PRs | The mover prints every changed file and ends with `git status --porcelain` |
 | H10 | A test scanner reads zero files after a move | The check passes vacuously | Every scanning check asserts a non-empty set |
 | H11 | The proposal that records the reorganisation names the old paths | `move` rewrites the record's "old" column, so the record shows every file moving to where it already is | The proposal note goes in `immutablePrefixes` when it is written (L10) |
+| H12 | A renamed file is named in a link label, or by its file name alone with no path | The link target follows the move, but the label still shows the old name, and the bare name is neither rewritten nor reported | `move` rewrites a label that is exactly the old name or path, and lists every other bare mention for review (§6.2 step 9) |
 
 ## 8. Distribution
 
-- **Plugin:** the skills (`/docs-kit-init`, then `/pin`, `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
+- **Plugin:** the skills (`/docs-kit-init` and `/pin`, then `/docs-reorg`) as a Claude Code plugin from this repo, which is also its marketplace (`.claude-plugin/`). The skills run the plugin's own copy of `scripts/docs-kit.mjs`.
 - **Scripts:** `scripts/docs-kit.mjs` with subcommands `init`, `check`, `index`, `move`, `print`, plus `lib/snapshots.mjs`. Usable through `npx` from this repo, as a devDependency pinned to a tag, or vendored.
 - **Versioning:** semver and a `CHANGELOG.md`. A vendored copy records its version.
 
