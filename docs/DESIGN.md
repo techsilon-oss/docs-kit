@@ -1,6 +1,6 @@
 # docs-kit — design spec
 
-> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12. Later steps are not built yet.
+> **Status:** draft 2026-10-31; owner decisions added 2026-11-12 (§11 answered, §3, §4.1, §10). Rollout step 0.1 (`docs-kit.json`, `check` with how-tos by role, `index`, `move`, hazard tests) was released as v0.1.0 on 2026-11-12; see [CHANGELOG.md](../CHANGELOG.md). Step 0.2 (`init` and the plugin with `/docs-kit-init`, §6.7) was released as v0.2.0 on 2026-11-12, and v0.2.1 (setup in two answers) the same day. Later steps are not built yet.
 > **Owner:** TechSilon LLC. **Decisions in this file:** marked **Decided**. Everything else is a proposal until the owner approves it.
 
 ---
@@ -182,7 +182,7 @@ Node first. A Python port is a later option, only if a trial project needs it.
 
 **Decided (2026-11-12):** a repo adopts docs-kit in one step, in two ways that share one implementation. The CLI is the engine; the skill is a guided layer over it; the govkit module (§9) calls the same CLI. No other way in copies the setup logic.
 
-**`docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>]`** (CLI, no Claude needed). The same repo always gives the same result.
+**`docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>] [--no-package]`** (CLI, no Claude needed). The same repo always gives the same result.
 
 1. Reads the repo and writes a starter `docs-kit.json` that describes the docs folder **as it is today**:
    - `subjects`: the folders already at the docs root;
@@ -193,12 +193,20 @@ Node first. A Python port is a later option, only if a trial project needs it.
    - `protected` and `roles` stay empty: only the owner knows them. `init` says so.
    - **Planned for 0.3:** `init` suggests `protected` paths. It lists each doc that a file under `immutablePrefixes` names by its repo-root path (for example a migration whose comment cites a doc as its spec), with the files that name it. Moving such a doc would leave those references stale for good, because `move` never edits immutable files. `init` prints the suggestions, and `--json` includes them, but it never writes them: `protected` stays the owner's choice, and `/docs-kit-init` asks about each one.
 2. Adds `docs/README.md` (the front door) when it is missing.
-3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`.
+3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`. `--no-package` leaves `package.json` alone, for a repo that does not want the dependency; the check then runs with `npx`.
 4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default. **The test is written only when the check passes.** While it fails, `init` skips the test and says so: a failing test would block every commit during the reorganisation. It goes in with the reorganisation's last slice (§6.3 step 5).
 5. Never overwrites, never commits, safe to run again. `--dry-run` lists the changes and writes nothing.
 6. Ends by running `check` with the new configuration. On a repo that does not follow the rule yet, the check fails; that is expected, is not an `init` failure (exit 0), and `init` points to the guided reorganisation (§6.3).
 
-**`/docs-kit-init`** (skill, in the plugin, §8). Runs `docs-kit init --dry-run`, shows the plan, and on the owner's yes runs it. Then it adds what needs judgement: explains each check finding, proposes `roles` and `protected` paths from what the repo shows (it writes `roles` only once how-tos exist, because `roles` with no how-tos fails the check), picks where the test goes and runs `init --test`, and offers the reorganisation steps (§6.3). It never moves a doc before the owner approves a proposal.
+**`/docs-kit-init`** (skill, in the plugin, §8). The owner should never need to know what to type next, so the skill asks every decision in **one prompt**, then ends with **one question**:
+
+1. Read-only first: preflight (branch, uncommitted changes, the project's rules), `init --dry-run`, where tests live, and `protected` candidates (docs named by files under `immutablePrefixes`, seeds, or code that reads a doc).
+2. One prompt, each question with a recommended answer: the **branch** (a new one when on the default, a shared or an unrelated branch), the **devDependency** (or `--no-package`), the **test file**, and the **`protected`** paths.
+3. Runs `init`, writes the chosen `protected` paths, runs the install, and explains each check finding. `roles` waits for the reorganisation proposal, because `roles` with no how-tos fails the check.
+4. One question: commit the setup files (only those, by name) on the branch, with a proposed message. It never pushes.
+5. One next step: the read-only audit that starts the reorganisation (§6.3). It never moves a doc before the owner approves a proposal.
+
+The project's own agent instructions (branch rules, commit style, dependency rules) win over the skill's defaults.
 
 ## 7. Hazards found in a real reorganisation
 
@@ -248,6 +256,8 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 **Decided (2026-11-12):** 0.1 is built first and on its own, in this repo, with no connection to any trial repo. Trial 1 then adopts the tagged release; nothing in this repo is written for it.
 
 **Decided (2026-11-12):** setup comes before Trial 1. 0.2 is `init` and the plugin with `/docs-kit-init` (§6.7), so the trial adopts the kit the way any repo would. `/pin` and `print` move to 0.3, `/docs-reorg` and the snapshot library to 0.4.
+
+**Decided (2026-11-12):** 0.2.1 makes setup take two answers (§6.7). In Trial 1 the owner had to know to ask for a new branch, approve the dependency, the install and the commit, and start the audit; the skill now asks all of that itself.
 
 **Decided (2026-11-12):** 0.3 also adds `protected` suggestions to `init` (§6.7). In Trial 1's setup, the skill had to search by hand to find a doc that applied migrations cite; `init` can find these itself.
 

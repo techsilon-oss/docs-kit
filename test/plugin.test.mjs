@@ -41,6 +41,16 @@ test('the skill only uses init options the CLI has', () => {
   const cli = text('scripts/docs-kit.mjs');
   for (const opt of used) assert.ok(cli.includes(`takeFlag(args, '${opt}')`) || cli.includes(`takeValue(args, '${opt}')`), `init ${opt}`);
   assert.ok(used.has('--dry-run') && used.has('--test'));
+  const named = [...s.matchAll(/`(--[a-z-]+)`/g)].map((m) => m[1]);
+  assert.ok(named.includes('--no-package'), 'the skill offers --no-package');
+  for (const opt of named) assert.ok(cli.includes(`takeFlag(args, '${opt}')`) || cli.includes(`takeValue(args, '${opt}')`), opt);
+});
+
+test('the skill pre-approves only reads: committing, pushing and installing go through the owner', () => {
+  const tools = /^allowed-tools: (.*)$/m.exec(text(SKILL).replace(/\r\n/g, '\n'))[1];
+  for (const bad of ['git commit', 'git push', 'git add', 'git switch', 'npm install', 'npm i ', 'Write', 'Edit']) {
+    assert.ok(!tools.includes(bad), `allowed-tools pre-approves "${bad}"`);
+  }
 });
 
 test('every finding the skill explains is a message the check prints', () => {
