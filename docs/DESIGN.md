@@ -191,6 +191,7 @@ Node first. A Python port is a later option, only if a trial project needs it.
    - `immutablePrefixes`: migration folders that exist (hazard H3), and the files another tool vendors with a checksum (`govkit.json` `files`), so `move` never edits them;
    - `snapshotTopics`: any `<subject>/snapshots/<topic>/` folders;
    - `protected` and `roles` stay empty: only the owner knows them. `init` says so.
+   - **Planned for 0.3:** `init` suggests `protected` paths. It lists each doc that a file under `immutablePrefixes` names by its repo-root path (for example a migration whose comment cites a doc as its spec), with the files that name it. Moving such a doc would leave those references stale for good, because `move` never edits immutable files. `init` prints the suggestions, and `--json` includes them, but it never writes them: `protected` stays the owner's choice, and `/docs-kit-init` asks about each one.
 2. Adds `docs/README.md` (the front door) when it is missing.
 3. With a `package.json`: adds `docs-kit` as a devDependency pinned to the release that ran (`github:techsilon-oss/docs-kit#v<version>`), and a `docs:check` script. Keys that exist are left alone. It does not run `npm install`.
 4. With `--test <file>`: writes the layout check as a test (vitest for `.js`/`.mjs`/`.ts`, pytest for `.py`). Where tests live is a project choice, so there is no default. **The test is written only when the check passes.** While it fails, `init` skips the test and says so: a failing test would block every commit during the reorganisation. It goes in with the reorganisation's last slice (§6.3 step 5).
@@ -238,7 +239,7 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 | 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
 | 0.2 | `docs-kit init` (§6.7), and the plugin with `/docs-kit-init` | `init` sets up a fixture repo, and running it again changes nothing; the skill sets up a repo from the plugin |
 | Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.4 |
-| 0.3 | `/pin` (neutral), `print` | A pin and a how-to with print copies are made in a fixture repo |
+| 0.3 | `/pin` (neutral), `print`; `init` suggests `protected` paths (§6.7) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` lists that doc as a suggestion and leaves `protected` empty |
 | 0.4 | `/docs-reorg`, snapshot library | Used end to end on a trial repo |
 | Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
 | Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
@@ -247,6 +248,8 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 **Decided (2026-11-12):** 0.1 is built first and on its own, in this repo, with no connection to any trial repo. Trial 1 then adopts the tagged release; nothing in this repo is written for it.
 
 **Decided (2026-11-12):** setup comes before Trial 1. 0.2 is `init` and the plugin with `/docs-kit-init` (§6.7), so the trial adopts the kit the way any repo would. `/pin` and `print` move to 0.3, `/docs-reorg` and the snapshot library to 0.4.
+
+**Decided (2026-11-12):** 0.3 also adds `protected` suggestions to `init` (§6.7). In Trial 1's setup, the skill had to search by hand to find a doc that applied migrations cite; `init` can find these itself.
 
 ## 11. Owner questions
 
