@@ -2,6 +2,17 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.2.1] - 2026-11-12
+
+### Added
+
+- `docs-kit init --no-package`: leaves `package.json` alone, for a repo that does not want the devDependency; the check and the test then run the pinned release with `npx`.
+
+### Changed
+
+- `/docs-kit-init` sets a repo up in two answers (DESIGN §6.7). It looks first (branch, the project's rules, the dry run, test location, `protected` candidates), asks every decision in one prompt (branch, devDependency or `--no-package`, test file, `protected` paths), does the work including the install, then asks one question: commit the setup files on the branch. It never pushes. It ends by offering the read-only audit.
+- README: the plugin install uses `/plugin marketplace add`, then `/plugin install docs-kit@docs-kit-marketplace`.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

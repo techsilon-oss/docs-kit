@@ -1,7 +1,7 @@
 {
   "name": "docs-kit",
   "description": "One layout for docs/ in any repo: set it up with /docs-kit-init, check it, and move docs without breaking a link or path.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "TechSilon LLC",
     "email": "oss@techsilon.com",
