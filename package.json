@@ -1,9 +1,9 @@
 {
   "name": "docs-kit",
-  "version": "0.3.0",
-  "description": "One layout for docs/, and the tools to keep it: a layout check and a doc mover that keeps every link and path working.",
-  "license": "MIT",
-  "author": "TechSilon LLC",
+  "version": "0.3.1",
+  "description": "One layout for docs/ in any repo: a check that keeps it, and a mover that keeps every link and path working.",
+  "license": "Apache-2.0",
+  "author": "Techsilon LLC <oss@techsilon.com>",
   "type": "module",
   "repository": {
     "type": "git",
@@ -15,9 +15,11 @@
   "files": [
     "scripts/",
     "examples/",
+    "docs/",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=22"

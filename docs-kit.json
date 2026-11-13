@@ -1,0 +1,18 @@
+// docs-kit's own docs follow the docs-kit layout. `npm test` runs the check.
+{
+  "docsRoot": "docs",
+  "subjects": ["guides", "reference"],
+  // The design, the FAQ and the upgrade notes sit at the docs root, where the kit standard puts them.
+  "rootAllowed": ["README.md", "DESIGN.md", "FAQ.md", "UPGRADING.md"],
+  "rootAllowedTools": {},
+  "docMaps": [],
+  "protected": {
+    // Released versions link here: the skills, and the comment init writes into docs-kit.json.
+    "docs/DESIGN.md": "released versions of docs-kit link to this path"
+  },
+  "immutablePrefixes": [],
+  "snapshotTopics": {},
+  "howtoStaleDays": 180,
+  "snapshotStaleDays": 30,
+  "roles": []
+}

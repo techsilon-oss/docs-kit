@@ -1,165 +1,82 @@
 # docs-kit
 
-One layout for `docs/`, and the tools to adopt it and keep it: a layout check, a doc mover that keeps every link and path working, a guided reorganisation, pinned notes and how-tos (`/pin`), print copies, and snapshot routing for generated docs.
+docs-kit gives every repo the same `docs/` layout, a check that keeps it, and a mover that changes where a doc lives without breaking a link or a path.
 
-> **Status:** 0.3.0 released 2026-11-13: the layout rule, `docs-kit.json`, `init` and the `/docs-kit-init` plugin skill (setup), `check`, `index` (how-tos by role), `move`, `print`, and the `/pin` plugin skill. `/docs-reorg` and the snapshot library come in a later step ([DESIGN §10](docs/DESIGN.md#10-rollout)). The design is in **[docs/DESIGN.md](docs/DESIGN.md)**.
+## What you get
 
-## Needs
+- **Every doc has one place.** The front door, `docs/README.md`, lists one folder per subject, and each folder has a map.
+- **A test fails when a doc is in the wrong place**, when a folder has no map, or when a file another tool reads is missing.
+- **You move a doc and nothing breaks.** `docs-kit move` rewrites every link and every path to it: in other docs, scripts, config, CI workflows and agent instructions. It never edits a file that must not change, such as an applied migration.
+- **Readers find the steps for their own role.** How-tos name who they are for, and the front door lists them by role.
+- **Notes and how-tos do not get lost in chats.** In Claude Code, `/docs-kit-pin` saves a discussion or a set of steps to its place, with `.docx` and `.pdf` copies if you ask.
 
-Node 22 or later, and git. No runtime dependencies: the scripts use Node built-ins only.
+## Quick start
 
-## Two ways to set it up
+From the root of your repo, in a terminal:
 
-- **In Claude Code: `/docs-kit-init`.** Install the plugin once per machine, then run `/docs-kit-init` in any repo. It applies the least-change defaults (the branch, the devDependency, the test file, the `protected` and frozen paths) and shows them in one prompt to approve or change, runs `docs-kit init`, explains what the check found, commits the setup on your yes, and offers the guided reorganisation. It never pushes, and never moves a doc without your yes.
-
-  The plugin also has **`/pin`**: save a discussion as a dated note in `docs/notes/`, or steps as a how-to in `docs/<subject>/howto/`, with print copies if you ask (DESIGN §6.4).
-
-  ```sh
-  /plugin marketplace add techsilon-oss/docs-kit
-  /plugin install docs-kit@docs-kit-marketplace
-  ```
-
-  Or from a terminal: `claude plugin install docs-kit --marketplace techsilon-oss/docs-kit`.
-
-- **Anywhere else: `docs-kit init`**, with Node and nothing else. The steps are below.
-
-Both run the same `init`, so they give the same files.
-
-## Use it
-
-1. Set it up, from the repo root. See what it would do first:
-
-   ```sh
-   npx github:techsilon-oss/docs-kit init --dry-run
-   npx github:techsilon-oss/docs-kit init --test tests/docs-layout.test.mjs
-   ```
-
-   `init` writes a `docs-kit.json` that describes your docs folder as it is today, adds the front door `docs/README.md` if it is missing, and, with a `package.json`, adds `docs-kit` as a devDependency pinned to the release and a `docs:check` script. Then run `npm install`. See [`docs-kit init`](#docs-kit-init) below.
-
-2. Run the check:
-
-   ```sh
-   npm run docs:check        # or: npx github:techsilon-oss/docs-kit check
-   ```
-
-   To pin a release with npx, use `npx github:techsilon-oss/docs-kit#v0.3.0 check`.
-
-3. Move docs and keep every reference working. Try `--dry-run` first:
-
-   ```sh
-   npx github:techsilon-oss/docs-kit move docs/legal docs/money/legal --dry-run
-   npx github:techsilon-oss/docs-kit move docs/legal docs/money/legal
-   ```
-
-To vendor instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo, keep the banner and `VERSION` in `docs-kit.mjs`, and send fixes back here.
-
-## `docs-kit init [--dry-run] [--docs-root <dir>] [--test <file>] [--no-package]`
-
-Sets up a repo in one step (DESIGN §6.7). The same repo always gives the same result.
-
-| It finds | It writes in `docs-kit.json` |
-|---|---|
-| The folders at the docs root | `subjects` |
-| Docs-root files another tool's manifest names (for example the hub and roadmap in `govkit.json`) | `rootAllowed`, so that tool keeps working |
-| `scripts/source-doc-map.json`, when it lists doc paths | `docMaps` |
-| Migration folders (`supabase/migrations/`, `db/migrations/`, ...) and files another tool vendors with a checksum (`govkit.json` `files`) | `immutablePrefixes`, so `move` never edits them |
-| Docs that those immutable files name by path (a migration that cites a doc as its spec) | `protected`, with the files that name them: moving the doc would leave them stale for good |
-| `<subject>/snapshots/<topic>/` folders | `snapshotTopics` |
-
-`roles` stays empty, and so does any other `protected` path (a doc path a database, a URL or code uses as a key): only you know them. Add them before you move anything.
-
-It also adds `docs/README.md` when it is missing, and, with a `package.json`, the devDependency `docs-kit` (`github:techsilon-oss/docs-kit#v<version>`) and a `docs:check` script. `--test <file>` writes the check as a test: vitest for `.js`, `.mjs` or `.ts`, pytest for `.py`. It does so only when the check passes; while it fails, a test would block every commit, so `init` skips it and says to run `init --test` again once the check passes. `--no-package` leaves `package.json` alone; run the check with `npx` instead.
-
-- It never overwrites a file, never commits, and does not run `npm install`. Running it again changes nothing.
-- `--dry-run` lists what it would do and writes nothing.
-- It ends by running `check`. On a docs folder that does not follow the layout yet, the check fails; that is expected, and `init` still exits 0. Reorganise with `move`, following [DESIGN §6.3](docs/DESIGN.md#63-guided-reorganisation--docs-reorg-skill).
-- Exit 2 for wrong arguments, or outside a git repository; nothing is written.
-
-## `docs-kit check`
-
-Exit 0 when the layout rule holds (warnings allowed), 1 with a list when it does not, 2 for a usage or configuration error.
-
-| Finding | Level |
-|---|---|
-| A file or folder at the docs root that is not allowed; no `docs/README.md` | error |
-| A subject folder without a `README.md` | error |
-| An `exports/` folder outside `archive/` | error |
-| A doc named in a doc map that does not exist; a doc map that selects nothing | error |
-| A file in a `snapshots/<topic>/` folder that is not a dated snapshot; a configured snapshot topic with no snapshots | error |
-| The newest snapshot of a topic older than `snapshotStaleDays`, by the date in its **file name** | warning |
-| A how-to whose `last_checked` is missing or older than `howtoStaleDays` | warning |
-| More than one print copy of a doc, or a print copy with no source beside it | warning |
-| Archive content not under `archive/<subject>/` | warning |
-| With `roles` configured: a how-to with no `roles:` or an unknown role; a missing or out-of-date "How-tos by role" section; no how-tos at all | error |
-
-Options: `--json` for machine-readable output, `--today YYYY-MM-DD` to fix the date used for freshness.
-
-To run it in your tests, see [examples/vitest](examples/vitest/docs-layout.test.mjs) and [examples/pytest](examples/pytest/test_docs_layout.py).
-
-## `docs-kit index`
-
-Writes the **How-tos by role** section of `docs/README.md` (DESIGN §4.1), so a reader finds the steps for their own role without knowing the subject folders. List the roles once in `docs-kit.json` (`"roles": ["customer", "support", "admin"]`) and name them in each how-to:
-
-```markdown
----
-title: Reset a password
-last_checked: 2026-11-01
-roles: [customer, support]
----
+```sh
+npx github:techsilon-oss/docs-kit#v0.3.1 init --dry-run
+npx github:techsilon-oss/docs-kit#v0.3.1 init
+npm install
 ```
 
-The section sits between `<!-- docs-kit:howtos-by-role:start -->` and `<!-- docs-kit:howtos-by-role:end -->`; the first run adds it at the end of the file. Do not edit it by hand: `check` fails when it differs from what `index` would write. Run `index` after you add a how-to or change its `roles` or `title`.
+The first command shows what `init` would write, and writes nothing. The second writes it and runs the check. On a docs folder that does not follow the layout yet, the check fails: that is expected. [Adopt docs-kit](docs/guides/howto/HOWTO-adopt-docs-kit.md) has every step, and [Reorganise a docs folder](docs/guides/howto/HOWTO-reorganise-a-docs-folder.md) makes the check pass.
 
-## `docs-kit move <old> <new> [<old> <new> ...] [--dry-run]`
+In Claude Code, install the plugin once, then run `/docs-kit-init` in any repo:
 
-For each pair, a file or a folder:
+```text
+/plugin marketplace add techsilon-oss/docs-kit
+/plugin install docs-kit@docs-kit-marketplace
+```
 
-- moves with `git mv`, **one file at a time**; untracked and ignored files in a moved folder move with it;
-- rewrites relative Markdown links (inline, images, reference definitions, `href`/`src`) in the moved files and in every file that links to them; links inside code fences are left alone;
-- replaces repo-root path strings (`docs/old/X.md`) in every tracked text file, including `.gitignore`, scripts, config, workflows and agent instructions, also when the path ends a sentence;
-- never edits files under `immutablePrefixes`, and lists the ones that name a moved path;
-- refuses to move a `protected` path, a path inside one, or a folder holding one, with the reason, and moves nothing;
-- in `archive/`, changes only links that point into a moved path;
-- lists every line that may build a moved path in pieces (`join(root, "docs", "old")`) for you to fix by hand;
-- when a move renames a file: rewrites a link label that is exactly the old name or path (`[OLD.md](OLD.md)`), and lists every other line that names the old file name alone, with no path, for you to fix by hand;
-- checks that every ignored file it moved is still ignored, and fails loudly if not;
-- prints every file it changed, ends with `git status --porcelain`, then runs `docs-kit check` when `docs-kit.json` exists.
+## What it does on your machine
 
-Stage **everything** in that `git status` list, not only the docs folders.
+| | |
+|---|---|
+| **Reads** | The files git tracks, and `docs-kit.json` at the repo root |
+| **Writes** | `init`: `docs-kit.json`, `docs/README.md` if missing, two keys in `package.json`, and the test file you name. It never overwrites a file. `move`: moves files with `git mv`, and rewrites the links and paths that name them. `index`: one marked section of `docs/README.md`. `print`: `.docx` and `.pdf` copies beside the source |
+| **Runs** | `git`. `print` runs `pandoc` when it is installed |
+| **Network** | docs-kit makes no network calls. `npx`, `npm install` and the plugin install download docs-kit from GitHub |
+| **Never** | Commits, pushes, sends data anywhere, or edits a file under `immutablePrefixes`. The Claude Code skills commit only after you say yes, and never push |
+| **Depends on** | Node 22 or later, and git. No runtime dependencies: Node built-ins only |
 
-Exit 0 when the move is done; 1 when a file that was ignored is no longer ignored (fix `.gitignore` before you stage anything); 2 when the move was refused or the arguments are wrong (nothing moved). Layout-check findings after a move are printed but do not change the exit code, because a reorganisation is often half way through.
+**Pin a release.** `init` pins the devDependency to the tag it ran from (`github:techsilon-oss/docs-kit#v0.3.1`). Release tags never move. For a stricter pin, use the commit: `github:techsilon-oss/docs-kit#<commit>`. To vendor it instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo and keep the banner and `VERSION` in `docs-kit.mjs`.
 
-Limits:
+## Uninstall
 
-- git finds renames by similarity. A small file whose links change a lot can show as a delete and an add, and `git log --follow` then loses it. Commit large moves before other edits.
-- Paths in other docs folders (`packages/web/docs/...`) and Windows-style `docs\old` paths are not rewritten.
-- A move cannot chain (`a -> b` and `b -> c` in one call). Run it twice.
+[Remove docs-kit](docs/guides/howto/HOWTO-remove-docs-kit.md) has the steps. In short: delete `docs-kit.json` and the test file, remove `docs-kit` and the `docs:check` script from `package.json`, and run `npm install`. Your docs stay as they are. To remove the plugin: `claude plugin uninstall docs-kit@docs-kit-marketplace`.
 
-## `docs-kit print <file.md> [--version X.Y] [--today YYYY-MM-DD]`
+## What is in it
 
-Makes `.docx` and `.pdf` print copies beside the source, named `<NAME>_v<X.Y>_<YYYY-MM-DD>`, and removes the older print copies of the same doc, so only the newest stays (DESIGN §6.5). It uses [pandoc](https://pandoc.org/installing.html), or the one `DOCS_KIT_PANDOC` names.
+| Part | What it does | Where |
+|---|---|---|
+| `docs-kit init` | Sets up a repo in one step: a `docs-kit.json` that describes the docs as they are, the front door, a pinned devDependency, the check as a test | [Commands](docs/reference/COMMANDS.md#docs-kit-init) |
+| `docs-kit check` | The layout check. Exit 0 when the layout holds, 1 with a list when it does not | [Commands](docs/reference/COMMANDS.md#docs-kit-check) |
+| `docs-kit move` | Moves docs and keeps every link and path working | [Commands](docs/reference/COMMANDS.md#docs-kit-move) |
+| `docs-kit index` | Writes the "How-tos by role" section of the front door | [Commands](docs/reference/COMMANDS.md#docs-kit-index) |
+| `docs-kit print` | Makes `.docx` and `.pdf` print copies with pandoc | [Commands](docs/reference/COMMANDS.md#docs-kit-print) |
+| `/docs-kit-init` | Claude Code: applies the setup defaults, explains what the check found, commits on your yes, and leads the reorganisation | [Adopt docs-kit](docs/guides/howto/HOWTO-adopt-docs-kit.md) |
+| `/docs-kit-pin` | Claude Code: saves a discussion as a dated note, or steps as a how-to | [DESIGN §6.4](docs/DESIGN.md#64-pins-and-how-tos--docs-kit-pin-skill) |
+| `/docs-kit-help` | Claude Code: answers a question from the docs of the version you have | [FAQ](docs/FAQ.md) |
 
-- The version is `--version`, else one minor up from the newest print copy, else `1.0`.
-- A `.pdf` needs a PDF engine for pandoc (for example a LaTeX install). A format that fails keeps its older copy and says why.
-- It warns about tables with more than five columns, which may run off the page.
-- Without pandoc, it skips printing with a message and exits 0. Exit 1 when pandoc ran and made no copy, 2 for wrong arguments.
+## Docs
 
-## Hazards
-
-The tools guard against the hazards found in real reorganisations ([DESIGN §7](docs/DESIGN.md#7-hazards-found-in-a-real-reorganisation)). Each guard has a test in [test/hazards.test.mjs](test/hazards.test.mjs) that reproduces the hazard on a fixture repo.
+- [Front door](docs/README.md): every doc, by subject.
+- [How-tos](docs/guides/README.md): adopt, reorganise, print, upgrade, remove.
+- [Commands](docs/reference/COMMANDS.md): every command, option, finding and exit code.
+- [FAQ](docs/FAQ.md) and [Upgrading](docs/UPGRADING.md).
+- [Design](docs/DESIGN.md): the layout rule, and why each part works the way it does.
 
 ## Develop
 
-```sh
-npm test
-```
+Run the tests with `npm test`. Work on a branch, open a pull request into `dev`, and sign off every commit (`git commit -s`). See [CONTRIBUTING](https://github.com/techsilon-oss/.github/blob/main/CONTRIBUTING.md), [CLAUDE.md](CLAUDE.md) and the [CHANGELOG](CHANGELOG.md).
 
-Work on `dev`; release to `main` by pull request. See [CLAUDE.md](CLAUDE.md) and [CHANGELOG.md](CHANGELOG.md).
-
-## Standalone by design
-
-Like [release-gate-kit](https://github.com/techsilon-oss/release-gate-kit), this kit solves one problem and needs no governance buy-in. [govkit](https://github.com/techsilon-oss/govkit) can use it through an optional module; docs-kit never depends on govkit.
+docs-kit stands alone. [govkit](https://github.com/techsilon-oss/govkit) can use it through an optional module; docs-kit never depends on govkit. It follows the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache License 2.0 from version 0.3.1. Earlier releases were published under MIT and stay MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+---
+
+Published by Techsilon LLC. Maintained by [@jisujit](https://github.com/jisujit). "docs-kit" and "Techsilon" are trademarks of Techsilon LLC: see [TRADEMARKS](https://github.com/techsilon-oss/.github/blob/main/TRADEMARKS.md).

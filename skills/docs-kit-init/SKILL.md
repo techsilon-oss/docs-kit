@@ -2,7 +2,7 @@
 name: docs-kit-init
 description: Set up docs-kit in the current repo in two answers. Applies the least-change defaults (branch, devDependency, test file, protected and frozen paths), shows them in one prompt to approve or override, runs `docs-kit init`, explains what the layout check found, commits the setup on a yes, and offers the guided reorganisation. Never overwrites, never pushes, never moves a doc. Use when a repo adopts docs-kit, or when docs-kit.json is missing.
 argument-hint: "[--docs-root <dir>]"
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" init*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" check*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" --version) Bash(git rev-parse *) Bash(git status *) Bash(git branch *) Bash(git symbolic-ref *) Bash(git grep *) Bash(git ls-files *) Bash(git diff *) Bash(node --version) Read Glob Grep
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" init*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" check*) Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/docs-kit.mjs" --version) Read Glob Grep
 ---
 
 # /docs-kit-init — set up docs-kit in this repo

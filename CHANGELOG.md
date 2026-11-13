@@ -2,6 +2,24 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.3.1] - 2026-11-13
+
+docs-kit now follows the [techsilon-oss kit standard](https://github.com/techsilon-oss/.github/blob/main/KIT-STANDARD.md). See [Upgrading](docs/UPGRADING.md#031).
+
+### Added
+
+- `/docs-kit-help`: answers a question from the docs of the installed version. Read-only.
+- docs-kit's own docs follow the docs-kit layout: a front door, how-tos to adopt, reorganise, print, upgrade and remove, a command reference, a FAQ and upgrade notes. `npm test` checks the layout, runs every docs-kit command the docs show, checks the version they pin, and checks every link and anchor.
+- CI on every pull request: the tests, the plugin manifests, and the kit standard's DCO and plain-words checks.
+- `NOTICE` and `.github/CODEOWNERS`.
+
+### Changed
+
+- **License: Apache License 2.0 from 0.3.1.** Earlier releases were published under MIT and stay MIT.
+- `/pin` is now `/docs-kit-pin`. The old name stays as an alias until the first release on or after 2026-12-13.
+- **Security:** `/docs-kit-init` and `/docs-kit-pin` pre-approve only the plugin's own `docs-kit` commands. They no longer run `git`, `date` or other commands without asking; 0.3.0 pre-approved `git branch`, `git diff` and `git symbolic-ref`, which can delete a branch, write a file or move `HEAD`. A test enforces the rule for every skill.
+- The README says what you get, what docs-kit does on your machine, and how to remove it. The command reference moved to `docs/reference/COMMANDS.md`.
+
 ## [0.3.0] - 2026-11-13
 
 ### Added
