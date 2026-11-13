@@ -265,7 +265,7 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 | 0.1 | Layout rule, `docs-kit.json`, `check` (including how-tos by role, §4.1), `move`, tests for every hazard guard | Both commands pass their tests on a fixture repo that reproduces H1 to H10 |
 | 0.2 | `docs-kit init` (§6.7), and the plugin with `/docs-kit-init` | `init` sets up a fixture repo, and running it again changes nothing; the skill sets up a repo from the plugin |
 | Trial 1 | A small app repo the owner names, with several user roles; its docs are scattered, with two guides for the same task that disagree, one guide per role, and developer notes mixed into user guides. No generator. It adopts the kit with `init`: the proposal is written by hand following §6.3, the moves are made with `move`, and `check` runs in its tests | Its `docs/` follows the rule, its how-tos are indexed by role, and the check runs in its tests. What the hand-written proposal needed feeds `/docs-reorg` in 0.4 |
-| 0.3 | `/pin` (neutral), `print`; `init` protects what immutable files name (L3, §6.7); `/docs-kit-init` asks only what no default settles | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` writes that doc to `protected` with its reason, and running it again changes nothing |
+| 0.3 | `/pin` (neutral), `print`; `init` protects what immutable files name (L3, §6.7); `/docs-kit-init` asks only what no default settles; `move` follows renamed files by name (below) | A pin and a how-to with print copies are made in a fixture repo; on a fixture where an immutable file names a doc, `init` writes that doc to `protected` with its reason, and running it again changes nothing |
 | 0.4 | `/docs-reorg` applying the least-change defaults (§6.3), snapshot library | Used end to end on a trial repo, where the owner answers only `roles` and approves the proposal once |
 | Trial 2 | A repo with a generator that writes to `docs/exports/` | Its snapshots go through the library; its `docs/` follows the rule |
 | Trial 3 | A larger repo that was reorganised by hand switches to the kit's tools | Its own docs scripts are replaced by the kit |
@@ -278,6 +278,12 @@ docs-kit stands alone. When a repo also uses govkit, a thin module in govkit (bu
 **Decided (2026-11-12):** 0.2.1 makes setup take two answers (§6.7). In Trial 1 the owner had to know to ask for a new branch, approve the dependency, the install and the commit, and start the audit; the skill now asks all of that itself.
 
 **Decided (2026-11-12):** 0.3 also adds `protected` suggestions to `init` (§6.7). In Trial 1's setup, the skill had to search by hand to find a doc that applied migrations cite; `init` can find these itself.
+
+**Trial 1 result (2026-11-13).** Adopted in four slices: setup and proposal, subject READMEs, the moves, the first how-to. Its `docs/` follows the rule, the check runs in its tests, and `index` lists its how-to by role. `move` rewrote every path outside `docs/` that named a moved doc (agent instructions, an env example, scripts, a test constant), with no edits by hand. What it taught:
+
+- Too many judgement calls reached the owner: hence the least-change defaults (§6.3) and setup in two answers (§6.7, 0.2.1).
+- `move` rewrote the proposal that recorded the move: H11, guarded by L10.
+- When a move **renames** a file, two references go stale that `move` neither rewrites nor reports: a link label that shows the old file name (`[OLD.md](OLD.md)`: the target is rewritten, the label is not), and the old file name written alone, with no path. **Planned for 0.3:** `move` rewrites a link label that is exactly the old file name or path, and lists every other line in a tracked text file that names the old file name, for review. A move that keeps the name (L2) has neither problem.
 
 **Decided (2026-11-13):** the least-change defaults (§6.3, L1 to L9). In Trial 1 the owner was asked a dozen judgement calls (branch, dependency, test path, what to protect, folder and file renames, historical docs, new subjects, which docs become how-tos). Almost all had one safe answer. Defaults now settle those, so the owner answers `roles` and approves the proposal once. With that, 0.3's `protected` suggestions are written by `init` rather than only suggested, because protecting only adds safety.
 

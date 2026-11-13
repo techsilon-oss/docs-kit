@@ -7,6 +7,7 @@ All notable changes to docs-kit. The format follows [Keep a Changelog](https://k
 ### Added
 
 - DESIGN §6.3: the least-change defaults (L1 to L10) a reorganisation applies without asking, so the owner answers `roles` and approves the proposal once.
+- DESIGN §10: the Trial 1 result, and, planned for 0.3, `move` follows a renamed file's old name in link labels and bare mentions.
 - Hazard H11: `move` rewrites the proposal note that records the move. Guard: the note goes in `immutablePrefixes` when it is written (L10); a test reproduces the hazard.
 
 ## [0.2.1] - 2026-11-12
