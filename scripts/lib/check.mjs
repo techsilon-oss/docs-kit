@@ -123,7 +123,7 @@ export function check(root, cfg, { today = new Date() } = {}) {
     const i = parts.indexOf('exports');
     if (i !== -1 && i < parts.length - 1) exportDirs.add(parts.slice(0, i + 1).join('/'));
   }
-  for (const e of exportDirs) errors.push(`${D}/${e}/: no exports/ tree; generated docs go to <subject>/snapshots/<topic>/`);
+  for (const e of exportDirs) errors.push(`${D}/${e}/: an exports/ folder is not allowed; move generated docs to <subject>/snapshots/<topic>/ (docs-kit snapshot)`);
 
   // Rule 6: archive mirrors the live tree.
   const archiveSubjects = new Set();

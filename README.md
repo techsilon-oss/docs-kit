@@ -16,8 +16,8 @@ docs-kit gives every repo the same `docs/` layout, a check that keeps it, and a 
 From the root of your repo, in a terminal:
 
 ```sh
-npx github:techsilon-oss/docs-kit#v0.4.0 init --dry-run
-npx github:techsilon-oss/docs-kit#v0.4.0 init
+npx github:techsilon-oss/docs-kit#v0.4.1 init --dry-run
+npx github:techsilon-oss/docs-kit#v0.4.1 init
 npm install
 ```
 
@@ -41,7 +41,7 @@ In Claude Code, install the plugin once, then run `/docs-kit-init` in any repo:
 | **Never** | Commits, pushes, sends data anywhere, or edits a file under `immutablePrefixes`. The Claude Code skills commit only after you say yes, and never push |
 | **Depends on** | Node 22 or later, and git. No runtime dependencies: Node built-ins only |
 
-**Pin a release.** `init` pins the devDependency to the tag it ran from (`github:techsilon-oss/docs-kit#v0.4.0`). Release tags never move. For a stricter pin, use the commit: `github:techsilon-oss/docs-kit#<commit>`. To vendor it instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo and keep the banner and `VERSION` in `docs-kit.mjs`.
+**Pin a release.** `init` pins the devDependency to the tag it ran from (`github:techsilon-oss/docs-kit#v0.4.1`). Release tags never move. For a stricter pin, use the commit: `github:techsilon-oss/docs-kit#<commit>`. To vendor it instead, copy `scripts/docs-kit.mjs` and `scripts/lib/` into your repo and keep the banner and `VERSION` in `docs-kit.mjs`.
 
 ## Uninstall
 

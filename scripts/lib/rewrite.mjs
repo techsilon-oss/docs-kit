@@ -174,6 +174,25 @@ export function findOldNames(text, names) {
 }
 
 /*
+ * Full-address links (a URL or an absolute path) that end in a moved path,
+ * such as https://host/org/repo/blob/main/docs/x/A.md in a link, or
+ * file:///c:/work/repo/docs/x/A.md. move cannot tell this repo from another
+ * repo or machine, so these are reported for review, never rewritten.
+ */
+export function findAddressPaths(text, keys) {
+  const hits = [];
+  if (!keys.length) return hits;
+  const re = new RegExp(`(?<=[${PATH_CHAR}]\\/)(${keys.map(escapeRe).join('|')})${AFTER}`, 'g');
+  const lines = text.split(/\r?\n/);
+  for (let n = 0; n < lines.length; n++) {
+    if (!/[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(lines[n])) continue;
+    const found = [...new Set([...lines[n].matchAll(re)].map((m) => m[1]))];
+    if (found.length) hits.push({ line: n + 1, text: lines[n].trim(), paths: found.sort() });
+  }
+  return hits;
+}
+
+/*
  * Pieced-together paths (hazard H7): code that builds a moved path from
  * quoted segments, such as join(root, "docs", "exports", "legal"). These are
  * reported for review, never rewritten.

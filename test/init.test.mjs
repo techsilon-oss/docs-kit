@@ -79,6 +79,26 @@ test('L3: init protects a doc an immutable file names, and only docs that exist;
   assert.equal(read(root, 'docs-kit.json'), before);
 }));
 
+test('L3: a protected doc at the docs root is allowed there, so the check can pass without moving it', withRepo({
+  ...MESSY,
+  'supabase/migrations/002_more.sql': "-- see docs/ONBOARDING.md\n",
+}, (root) => {
+  const { config, notes } = detectConfig(root);
+  assert.ok('docs/ONBOARDING.md' in config.protected);
+  assert.deepEqual(config.rootAllowed, ['README.md', 'HUB.md', 'ROADMAP.md', 'ONBOARDING.md']);
+  assert.ok(notes.some((n) => n === 'rootAllowed: docs/ONBOARDING.md stays at the docs root, because it is protected'), notes.join('\n'));
+}));
+
+test('init warns when Biome would reject the comments in docs-kit.json', withRepo({ ...MESSY, 'biome.json': '{}\n' }, (root) => {
+  const r = run(root, 'init', '--dry-run');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /biome\.json: Biome reads docs-kit\.json as strict JSON and rejects its comments/);
+}));
+
+test('init says nothing about Biome when the repo does not use it', withRepo(MESSY, (root) => {
+  assert.ok(!detectConfig(root).notes.some((n) => n.includes('Biome')));
+}));
+
 test('detect: a doc map that selects nothing is left out', withRepo({
   ...MESSY, 'scripts/source-doc-map.json': '{"mappings": []}',
 }, (root) => {
