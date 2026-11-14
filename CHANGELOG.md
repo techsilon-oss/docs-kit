@@ -2,6 +2,18 @@
 
 All notable changes to docs-kit. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.4.1] - 2026-11-13
+
+Fixes from Trial 2 (DESIGN §10).
+
+### Changed
+
+- `move` lists every link that names a moved doc by its full address, such as a GitHub URL to the repo's own file or a `file:///` link, under `REVIEW` (hazard H13). It does not rewrite them.
+- `init` adds a protected doc at the docs root to `rootAllowed`, because it may not move, so the check can pass with it in place.
+- `init` warns when the repo uses Biome, which rejects the comments in `docs-kit.json`, and names the fix.
+- `check`: the exports error now says an `exports/` folder is not allowed, instead of reading as if the folder were missing.
+- `/docs-kit-reorg`: the generator slice comes before the moves, and the largest move last; folders that hold a protected doc are kept; `archive` is never listed as a subject; each doc that stays gets one reason, "cannot move" or "kept by choice"; and the owner is told which code files changed only in a doc path, since a doc-sync gate may report them.
+
 ## [0.4.0] - 2026-11-13
 
 ### Added

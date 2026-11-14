@@ -107,6 +107,26 @@ test('H12: a move that keeps the file name lists no old names', withFixture({}, 
   assert.deepEqual(r.nameHits, []);
 }));
 
+test('H13: a link that spells out the full address of a moved doc is listed for review, not rewritten', withFixture({}, (root, cfg) => {
+  const doc = 'docs/platform/NOTES.md';
+  writeFileSync(join(root, doc), [
+    '# Notes',
+    '',
+    '[1]: https://github.com/example-org/example-app/blob/main/docs/legal/TERMS.md "Terms"',
+    'See [the terms](file:///c:/work/example-app/docs/legal/TERMS.md).',
+    'And [here](../legal/TERMS.md).',
+    '',
+  ].join('\n'));
+  git(root, 'add', doc);
+  git(root, 'commit', '-q', '-m', 'notes');
+  const r = move(root, [['docs/legal/TERMS.md', 'docs/money/TERMS.md']], { cfg: { ...cfg, subjects: [...cfg.subjects, 'money'] } });
+  const text = read(root, doc);
+  assert.match(text, /\(\.\.\/money\/TERMS\.md\)/, 'a relative link follows the move');
+  assert.match(text, /blob\/main\/docs\/legal\/TERMS\.md/, 'a full address is not rewritten');
+  const hits = r.addressHits.map((h) => `${h.file}:${h.line}`);
+  assert.deepEqual(hits, [`${doc}:3`, `${doc}:4`], JSON.stringify(r.addressHits));
+}));
+
 test('H4: gitignore rules follow the move, so confidential files stay ignored', withFixture({}, (root, cfg) => {
   const r = move(root, [['docs/legal', 'docs/money/legal']], { cfg: { ...cfg, subjects: [...cfg.subjects, 'money'] } });
   const gi = read(root, '.gitignore');

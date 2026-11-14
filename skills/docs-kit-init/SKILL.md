@@ -77,7 +77,7 @@ On the answers, in order:
 | `folder is not a configured subject` | A docs-root folder not in `subjects` | Adding it to `subjects`, or moving it |
 | `missing (every subject folder needs a map)` | A subject folder with no `README.md` | Writing that README (a short map of the folder) |
 | `missing (the front door)` | No `docs/README.md` | `init` writes one; if it is listed, re-run `init` |
-| `no exports/ tree` | Generated docs in an `exports/` folder | Moving them to `<subject>/snapshots/<topic>/` |
+| `an exports/ folder is not allowed` | Generated docs in an `exports/` folder | Moving them to `<subject>/snapshots/<topic>/` |
 | `doc map file not found`, or a doc map path that does not exist | A gate names a doc that is not there | Fixing the map, or the doc's path |
 | `how-tos are named HOWTO-<task>.md`, `last_checked` | A how-to's name or its freshness date | Renaming it with `move`, or checking the steps and setting `last_checked` |
 | Role findings (`no roles:`, `How-tos by role`) | Only when `roles` is set | Adding `roles:` to each how-to, then `DOCS_KIT index` |

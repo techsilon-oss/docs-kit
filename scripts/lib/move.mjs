@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync
 import { join, posix } from 'node:path';
 import { DEFAULTS, normalizeRel } from './config.mjs';
 import { checkIgnored, gitMv, ignoredFiles, statusPorcelain, trackedFiles, untrackedFiles } from './git.mjs';
-import { PathMap, findOldNames, findPiecedPaths, rewriteMarkdown, replaceRootPaths, rootPathRegex } from './rewrite.mjs';
+import { PathMap, findAddressPaths, findOldNames, findPiecedPaths, rewriteMarkdown, replaceRootPaths, rootPathRegex } from './rewrite.mjs';
 
 export class MoveError extends Error {}
 
@@ -105,6 +105,7 @@ export function planRewrites(root, plan, cfg = DEFAULTS) {
   const immutableHits = [];
   const piecedHits = [];
   const nameHits = [];
+  const addressHits = [];
   // H12: the old names of files whose name changes, not only their folder.
   const oldNames = [...new Set(plan.filePairs.filter((p) => posix.basename(p.from) !== posix.basename(p.to)).map((p) => posix.basename(p.from)))];
   const scanNames = (file, text) => { for (const h of findOldNames(text, oldNames)) nameHits.push({ file, ...h }); };
@@ -136,8 +137,9 @@ export function planRewrites(root, plan, cfg = DEFAULTS) {
     }
     if (next !== text) rewrites.push({ oldPath: file, newPath, content: next });
     scanNames(newPath, next);
+    if (!inArchive) for (const h of findAddressPaths(next, keys)) addressHits.push({ file: newPath, ...h });
   }
-  return { rewrites, immutableHits, piecedHits, nameHits };
+  return { rewrites, immutableHits, piecedHits, nameHits, addressHits };
 }
 
 function removeEmptyDirs(root, dir, stopAt, warnings) {
@@ -162,7 +164,7 @@ function removeEmptyDirs(root, dir, stopAt, warnings) {
  */
 export function move(root, pairs, { cfg = DEFAULTS, dryRun = false } = {}) {
   const plan = planMoves(root, pairs, cfg);
-  const { rewrites, immutableHits, piecedHits, nameHits } = planRewrites(root, plan, cfg);
+  const { rewrites, immutableHits, piecedHits, nameHits, addressHits } = planRewrites(root, plan, cfg);
   const report = {
     dryRun,
     moves: plan.filePairs,
@@ -170,6 +172,7 @@ export function move(root, pairs, { cfg = DEFAULTS, dryRun = false } = {}) {
     immutableHits,
     piecedHits,
     nameHits,
+    addressHits,
     ignoredMoves: plan.ignoredMoves,
     newlyVisible: [],
     warnings: [],
@@ -220,6 +223,10 @@ export function formatMove(r) {
   if (r.nameHits.length) {
     lines.push(`REVIEW: ${r.nameHits.length} line(s) name a renamed file by its old name alone; not rewritten, fix by hand:`);
     for (const h of r.nameHits) lines.push(`  ${h.file}:${h.line}: ${h.text}   [${h.names.join(', ')}]`);
+  }
+  if (r.addressHits.length) {
+    lines.push(`REVIEW: ${r.addressHits.length} line(s) link to a moved path by a full address (a URL or file:///); not rewritten, fix by hand:`);
+    for (const h of r.addressHits) lines.push(`  ${h.file}:${h.line}: ${h.text}   [${h.paths.join(', ')}]`);
   }
   for (const w of r.warnings) lines.push(`WARNING ${w}`);
   if (r.newlyVisible.length) {

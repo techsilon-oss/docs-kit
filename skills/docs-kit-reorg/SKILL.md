@@ -39,8 +39,8 @@ Write it as a dated note, `docs/notes/<YYYY-MM-DD>-docs-kit-reorganisation.md`, 
 
 1. **Findings:** what the audit and the check found, in a few lines.
 2. **Defaults applied:** one line per default from L1 to L10 that this proposal uses, with what it means here.
-3. **Subjects:** keep every existing folder and its name (L1). Add a subject only for files that fit none of them; start from the starter list (DESIGN §4). Add `notes` for the proposal itself.
-4. **Old → new:** one row per file that moves. The folder changes; the file name does not (L2). Docs that the agent instructions or the front door name as a starting point stay where they are (L5). Files another tool's manifest names stay at the root (L7).
+3. **Subjects:** keep every existing folder and its name (L1). Add a subject only for files that fit none of them; start from the starter list (DESIGN §4). Add `notes` for the proposal itself. Keep every folder that holds a protected doc where it is, so that doc does not have to move. Never list `archive` as a subject: the check treats `archive/` as built in.
+4. **Old → new:** one row per file that moves. The folder changes; the file name does not (L2). Docs that the agent instructions or the front door name as a starting point stay where they are (L5). Files another tool's manifest names stay at the root (L7). Give each doc that stays a reason, and keep two reasons apart: **cannot move** (protected, or named by an immutable file) and **kept by choice** (a default or the owner). Only the first is fixed; the owner may move the second.
 5. **Protected and frozen:** the docs immutable files name (L3, already in `docs-kit.json` from `init`), any other protected path with its reason, and the historical folders that go in `immutablePrefixes` (L4).
 6. **Generated docs:** for each exports tree or generator:
    - one `snapshotTopics` entry per topic, to the subject it belongs to;
@@ -53,8 +53,8 @@ Write it as a dated note, `docs/notes/<YYYY-MM-DD>-docs-kit-reorganisation.md`, 
 10. **Hazards:** each one the audit found, and how the plan handles it.
 11. **Slices** (L8), one pull request each:
     1. the folder maps (`README.md` in each subject), the new subjects in `docs-kit.json`, and this note. No moves;
-    2. the moves;
-    3. the generators and their snapshots, if there are any;
+    2. the generators and their snapshots, if there are any;
+    3. the moves, largest last, so a problem in a big move is not mixed up with the others;
     4. the how-tos, `roles` and `DOCS_KIT index`;
     5. close: `init --test`, once the check passes.
 
@@ -71,10 +71,11 @@ On the approval: record it in the note (date, and what was approved), then commi
 
 1. For slice 1, write each missing folder map: one line per doc, with a link. Write nothing else.
 2. For each move, run `DOCS_KIT move <old> <new> [<old> <new> ...] --dry-run` first. Read the whole output.
-3. If the dry run shows something the proposal did not foresee (a file you did not expect in the change list, a `REVIEW` line, an immutable file that names a moved path, a refusal), STOP. Tell the owner what it is, and propose what to do.
+3. If the dry run shows something the proposal did not foresee (a file you did not expect in the change list, a `REVIEW` line (pieced paths, old names, or a full-address link such as a GitHub URL or `file:///`), an immutable file that names a moved path, a refusal), STOP. Tell the owner what it is, and propose what to do.
 4. Run the move without `--dry-run`. Then run the project's tests and `DOCS_KIT check`.
-5. Stage every file that `git status` lists, not only the docs folders. Ask: "Commit slice <n> as `<message>`?" Commit on a yes. Then say how the slice reaches the shared branch under the project's rules (for example, a pull request into `dev`).
-6. For the generators slice: change the generator's code as the proposal says, run it once, and check the new snapshot sits at the path `docs-kit snapshot path` gives. Run `DOCS_KIT check`.
+5. Tell the owner which code files changed only because a doc path in them was rewritten. A doc-sync check that maps code to docs (for example govkit's) may report them as code changes on the next release pull request. The owner then approves that pull request with a short reason; do not edit mapped docs or loosen the map to quiet it.
+6. Stage every file that `git status` lists, not only the docs folders. Ask: "Commit slice <n> as `<message>`?" Commit on a yes. Then say how the slice reaches the shared branch under the project's rules (for example, a pull request into `dev`).
+7. For the generators slice: change the generator's code as the proposal says, run it once, and check the new snapshot sits at the path `docs-kit snapshot path` gives. Run `DOCS_KIT check`.
 
 ## Step 6 — Close
 

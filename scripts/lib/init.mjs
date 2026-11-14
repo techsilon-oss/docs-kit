@@ -111,6 +111,21 @@ export function detectConfig(root, docsRoot = DEFAULTS.docsRoot) {
   }
 
   const prot = protectNamedDocs(root, docsRoot, immutablePrefixes, listDocFiles(root, docsRoot), notes);
+  // A protected doc at the docs root cannot move, so the check must allow it there.
+  for (const p of Object.keys(prot)) {
+    const f = p.slice(docsRoot.length + 1);
+    if (f.includes('/') || rootAllowed.includes(f)) continue;
+    rootAllowed.push(f);
+    notes.push(`rootAllowed: ${p} stays at the docs root, because it is protected`);
+  }
+
+  // docs-kit.json has comments; a linter that reads every .json file strictly rejects them.
+  for (const f of ['biome.json', 'biome.jsonc']) {
+    if (existsSync(join(root, f))) {
+      notes.push(`${f}: Biome reads docs-kit.json as strict JSON and rejects its comments; exclude docs-kit.json in ${f}, or allow comments in it`);
+      break;
+    }
+  }
 
   const config = {
     docsRoot,

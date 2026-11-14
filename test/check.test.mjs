@@ -38,7 +38,7 @@ test('rule 4: no exports/ tree (archive excepted)', withFixture({
   extra: { 'docs/legal/exports/LEGAL_2026-01-01.md': 'x', 'docs/archive/legal/exports/OLD.md': 'x' },
 }, (root, cfg) => {
   const e = errorsOf(root, cfg);
-  assert.ok(has(e, 'docs/legal/exports/: no exports/ tree'), e.join('\n'));
+  assert.ok(has(e, 'docs/legal/exports/: an exports/ folder is not allowed'), e.join('\n'));
   assert.ok(!has(e, 'archive/legal/exports'), e.join('\n'));
 }));
 
